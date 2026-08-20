@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Resident login for the Digital Barangay App">
+  <title>Resident Login — Digital Barangay App</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <header class="hall-header">
+    <div class="hall-header__inner">
+      <div class="seal" aria-hidden="true">BSI</div>
+      <div>
+        <p class="eyebrow">Resident Access</p>
+        <h1>Barangay San Isidro</h1>
+        <p class="tagline">Sign in to submit requests and track them from your account.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-shell">
+    <form id="member-login-form" class="counter-form admin-login-card" novalidate>
+      <h3>Resident sign in</h3>
+      <p class="hint">Use the account you registered with the barangay front desk.</p>
+
+      <div id="login-error" class="form-alert" hidden></div>
+
+      <label for="member-email">Email <span aria-hidden="true">*</span></label>
+      <input id="member-email" type="email" autocomplete="username" required>
+
+      <label for="member-password">Password <span aria-hidden="true">*</span></label>
+      <input id="member-password" type="password" autocomplete="current-password" required>
+
+      <button type="submit" class="btn btn--green" id="login-submit">Sign in</button>
+    </form>
+  </main>
+
+  <footer class="hall-footer">
+    <p>Digital Barangay App — front desk</p>
+    <span><a href="index.html">Back to the front desk</a> &middot; <a href="admin-login.html">Staff login</a></span>
+  </footer>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/member-login.js"></script>
+</body>
+</html>
