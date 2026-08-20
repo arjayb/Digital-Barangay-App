@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex"><title>Resident Dashboard — Digital Barangay App</title>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="admin.css">
+<style>
+.member-main{max-width:1180px;margin:32px auto;padding:0 20px}.member-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}.member-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}.metric{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px}.metric span{display:block;color:#666;font-size:13px}.metric strong{font-size:28px;display:block;margin-top:4px}.member-section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin-bottom:22px;overflow:auto}.member-section h2{margin-top:0}.data-table{width:100%;border-collapse:collapse}.data-table th,.data-table td{padding:12px 9px;border-bottom:1px solid #eee;text-align:left;font-size:14px;vertical-align:top}.data-table th{font-size:12px;text-transform:uppercase;letter-spacing:.04em}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef3ee;text-transform:capitalize;font-size:12px}.empty{color:#777}.error{padding:12px;background:#fff0f0;border:1px solid #e0b5b5;border-radius:8px;margin-bottom:16px}.actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){.member-grid{grid-template-columns:1fr}.member-top{align-items:flex-start;flex-direction:column}.data-table{min-width:700px}}
+</style>
+<script src="api.js"></script>
+<script src="member-guard.js"></script>
+</head>
+<body>
+<header class="hall-header"><div class="hall-header__inner"><div class="seal" aria-hidden="true">BSI</div><div><p class="eyebrow">Resident Portal</p><h1>Barangay San Isidro</h1><p class="tagline">Your requests, concerns and barangay updates in one place.</p></div></div></header>
+<main class="member-main">
+<div id="dashboard-error" class="error" hidden></div>
+<div class="member-top"><div><p class="eyebrow">My Account</p><h2 id="welcome">Resident Dashboard</h2><p class="hint" id="resident-email"></p></div><div class="actions"><a class="btn btn--green" href="index.html">Submit a Request</a><button id="refresh-btn" class="btn btn--ghost" type="button">Refresh</button><button id="logout-btn" class="btn btn--ghost" type="button">Log out</button></div></div>
+<section class="member-grid"><div class="metric"><span>Total Requests</span><strong id="request-count">—</strong></div><div class="metric"><span>Pending / Processing</span><strong id="active-count">—</strong></div><div class="metric"><span>Open Concerns</span><strong id="concern-count">—</strong></div></section>
+<section class="member-section"><h2>My Document Requests</h2><p class="hint">Track every request submitted through the barangay front desk.</p><div id="requests-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Document</th><th>Purpose</th><th>Submitted</th><th>Status</th><th>Tracking</th></tr></thead><tbody id="requests-body"></tbody></table></section>
+<section class="member-section"><h2>My Concerns</h2><p class="hint">Follow the barangay response to your reported concerns.</p><div id="concerns-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Category</th><th>Location</th><th>Description</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="concerns-body"></tbody></table></section>
+</main>
+<footer class="hall-footer"><p>Digital Barangay App — resident portal</p><span><a href="index.html">Front desk</a> &middot; <a href="admin-login.html">Staff login</a></span></footer>
+<script>
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=v=>v?new Date(v).toLocaleString():'—';
+const pretty=v=>String(v||'').replaceAll('_',' ');
+function showError(message){const e=document.getElementById('dashboard-error');e.textContent=message;e.hidden=false}
+function hideError(){document.getElementById('dashboard-error').hidden=true}
+async function loadDashboard(){hideError();document.getElementById('requests-loading').hidden=false;document.getElementById('concerns-loading').hidden=false;try{const [requests,concerns]=await Promise.all([getMyRequests(),getMyConcerns()]);const rs=requests.requests||[];const cs=concerns.concerns||[];document.getElementById('request-count').textContent=rs.length;document.getElementById('active-count').textContent=rs.filter(r=>!['completed','rejected'].includes(r.status)).length;document.getElementById('concern-count').textContent=cs.filter(c=>c.status!=='resolved').length;renderRequests(rs);renderConcerns(cs)}catch(e){if(e.status===401)clearSession();showError(e.message)}finally{document.getElementById('requests-loading').hidden=true;document.getElementById('concerns-loading').hidden=true}}
+function renderRequests(rows){document.getElementById('requests-body').innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${esc(r.documentType)}</strong></td><td>${esc(r.purpose)}</td><td>${fmt(r.createdAt)}</td><td><span class="badge">${esc(pretty(r.status))}</span></td><td>${esc(r.trackingNumber||r.id||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">You have not submitted any document requests yet.</td></tr>'}
+function renderConcerns(rows){document.getElementById('concerns-body').innerHTML=rows.length?rows.map(c=>`<tr><td>${esc(c.category)}</td><td>${esc(c.location||'—')}</td><td>${esc(c.description)}</td><td>${fmt(c.createdAt)}</td><td><span class="badge">${esc(pretty(c.status))}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">You have not reported any concerns yet.</td></tr>'}
+document.getElementById('refresh-btn').addEventListener('click',loadDashboard);document.getElementById('logout-btn').addEventListener('click',()=>{clearSession();location.replace('member-login.html')});
+document.addEventListener('member-auth-ready',e=>{const u=e.detail.user;document.getElementById('welcome').textContent=`Welcome, ${u.fullName}`;document.getElementById('resident-email').textContent=u.email;loadDashboard()});
+</script>
+</body></html>
