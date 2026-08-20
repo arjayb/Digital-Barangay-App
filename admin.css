@@ -1,0 +1,59 @@
+.admin-shell {
+  display: grid;
+  place-items: start center;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 20px 30px;
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.form-alert {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 7px;
+  background: rgba(182, 70, 56, .1);
+  border: 1px solid rgba(182, 70, 56, .35);
+  color: var(--red);
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.btn:disabled { opacity: .65; cursor: not-allowed; }
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 0;
+}
+
+.admin-topbar .role-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+
+.admin-panel {
+  max-width: 900px;
+  margin: 24px auto 60px;
+  padding: 28px;
+}
