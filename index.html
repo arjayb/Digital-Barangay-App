@@ -34,7 +34,7 @@
       <div class="section-intro">
         <p class="eyebrow">Window 01</p>
         <h2>Request a document</h2>
-        <p class="hint">Fill this out like you would at the counter. Your claim stub appears right away, and your request stays saved on this device.</p>
+        <p class="hint">Sign in to file a request. Your tracking number and status are saved to your resident account.</p>
       </div>
 
       <div class="panel__grid">
@@ -54,12 +54,6 @@
           <label for="doc-purpose">Purpose <span aria-hidden="true">*</span></label>
           <input id="doc-purpose" type="text" placeholder="Job application, school requirement" required>
 
-          <label for="doc-name">Full name <span aria-hidden="true">*</span></label>
-          <input id="doc-name" type="text" placeholder="Juan Dela Cruz" required>
-
-          <label for="doc-contact">Contact number <span aria-hidden="true">*</span></label>
-          <input id="doc-contact" type="tel" placeholder="09XX XXX XXXX" required>
-
           <button type="submit" class="btn btn--green">Submit request</button>
         </form>
 
@@ -74,8 +68,8 @@
       <div class="request-list">
         <div class="list-heading">
           <div>
-            <h3>Recent requests</h3>
-            <p class="hint">Tap a status to simulate a desk update.</p>
+            <h3>My requests</h3>
+            <p class="hint">Live status from the barangay system.</p>
           </div>
         </div>
         <div id="request-list-items" class="stub-stack"></div>
@@ -98,7 +92,7 @@
       <div class="section-intro">
         <p class="eyebrow">Window 03</p>
         <h2>Report a concern</h2>
-        <p class="hint">For non-emergencies. For anything urgent, call the barangay hotline directly.</p>
+        <p class="hint">For non-emergencies. Sign in so you can track the concern after submission.</p>
       </div>
 
       <div class="panel__grid">
@@ -128,17 +122,12 @@
             <span>Report anonymously</span>
           </label>
 
-          <div id="report-contact-wrap">
-            <label for="report-contact">Contact number (optional)</label>
-            <input id="report-contact" type="tel" placeholder="09XX XXX XXXX">
-          </div>
-
           <button type="submit" class="btn btn--red">Submit report</button>
         </form>
 
         <div class="reports-list">
-          <h3>Recent reports</h3>
-          <p class="hint">Status updates as the tanod team responds.</p>
+          <h3>My concerns</h3>
+          <p class="hint">Live status from the barangay system.</p>
           <div id="report-list-items" class="slip-stack"></div>
         </div>
       </div>
@@ -150,6 +139,7 @@
     <span>Built for Barangay San Isidro</span>
   </footer>
 
+  <script src="api.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
