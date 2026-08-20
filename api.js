@@ -45,7 +45,7 @@ function createRequest({ documentType, purpose, attachments = [] }) {
   return apiRequest('/requests', { method: 'POST', body: form, auth: true, formData: true });
 }
 function getMyConcerns() { return apiRequest('/concerns', { auth: true }); }
-function createConcern({ category, description, location, attachments = [] }) {
+function createConcern({ category, description, location = '', attachments = [] }) {
   if (!attachments.length) return apiRequest('/concerns', { method: 'POST', body: { category, description, location }, auth: true });
   const form = new FormData(); form.append('category', category); form.append('description', description); form.append('location', location);
   attachments.forEach(file => form.append('attachments', file));
