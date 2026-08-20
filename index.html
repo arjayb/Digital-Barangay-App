@@ -1,138 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Digital Barangay App — Front Desk</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Digital Front Desk for Barangay San Isidro">
+  <title>Digital Barangay App — Front Desk</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<header class="hall-header">
-  <div class="hall-header__inner">
-    <div class="seal" aria-hidden="true">BSI</div>
-    <div class="hall-header__text">
-      <h1>Barangay San Isidro</h1>
-      <p class="tagline">Digital Front Desk — request, check, and report, anytime</p>
+  <header class="hall-header">
+    <div class="hall-header__inner">
+      <div class="seal" aria-hidden="true">BSI</div>
+      <div>
+        <p class="eyebrow">Digital Front Desk</p>
+        <h1>Barangay San Isidro</h1>
+        <p class="tagline">Request, check, and report — without the line.</p>
+      </div>
+      <div class="header-note">
+        <strong>At your service</strong>
+        <span>Everyday barangay requests, made a little easier for every household.</span>
+      </div>
     </div>
-  </div>
-</header>
+  </header>
 
-<nav class="tabs" role="tablist" aria-label="Front desk sections">
-  <button class="tab tab--active" data-tab="requests" role="tab" aria-selected="true">📄 Request Documents</button>
-  <button class="tab" data-tab="directory" role="tab" aria-selected="false">📌 Directory &amp; Notices</button>
-  <button class="tab" data-tab="reports" role="tab" aria-selected="false">📣 Report a Concern</button>
-</nav>
+  <nav class="tabs" role="tablist" aria-label="Front desk sections">
+    <button class="tab tab--active" data-tab="requests" role="tab" aria-selected="true">Request Documents</button>
+    <button class="tab" data-tab="directory" role="tab" aria-selected="false">Directory &amp; Notices</button>
+    <button class="tab" data-tab="reports" role="tab" aria-selected="false">Report a Concern</button>
+  </nav>
 
-<main class="desk">
-
-  <!-- ===== TAB 1: DOCUMENT REQUESTS ===== -->
-  <section id="requests" class="panel panel--active" role="tabpanel">
-    <div class="panel__grid">
-
-      <form id="request-form" class="counter-form">
+  <main class="desk">
+    <section id="requests" class="panel panel--active" role="tabpanel">
+      <div class="section-intro">
+        <p class="eyebrow">Window 01</p>
         <h2>Request a document</h2>
-        <p class="hint">Fill this out like you would at the window. We'll print your claim stub below.</p>
-
-        <label for="doc-type">Document type</label>
-        <select id="doc-type" required>
-          <option value="" disabled selected>Select a document</option>
-          <option value="Barangay Clearance">Barangay Clearance</option>
-          <option value="Certificate of Residency">Certificate of Residency</option>
-          <option value="Certificate of Indigency">Certificate of Indigency</option>
-          <option value="Business Permit Endorsement">Business Permit Endorsement</option>
-        </select>
-
-        <label for="doc-purpose">Purpose</label>
-        <input id="doc-purpose" type="text" placeholder="e.g. Job application, school requirement" required>
-
-        <label for="doc-name">Full name</label>
-        <input id="doc-name" type="text" placeholder="Juan Dela Cruz" required>
-
-        <label for="doc-contact">Contact number</label>
-        <input id="doc-contact" type="tel" placeholder="09XX XXX XXXX" required>
-
-        <button type="submit" class="btn btn--green">Submit request</button>
-      </form>
-
-      <div class="stub-area">
-        <div id="stub-placeholder" class="stub-placeholder">
-          <p>Your claim stub will appear here once you submit a request.</p>
-        </div>
-        <div id="stub-output"></div>
+        <p class="hint">Fill this out like you would at the counter. Your claim stub appears right away, and your request stays saved on this device.</p>
       </div>
 
-    </div>
+      <div class="panel__grid">
+        <form id="request-form" class="counter-form">
+          <h3>Tell us what you need</h3>
+          <p class="hint">Choose one document and share the purpose so the desk can prepare it correctly.</p>
 
-    <div class="request-list">
-      <h3>Your requests</h3>
-      <p class="hint">Tap a stub's status to move it forward — this simulates the barangay staff updating it at their end.</p>
-      <div id="request-list-items" class="stub-stack"></div>
-    </div>
-  </section>
+          <label for="doc-type">Document type <span aria-hidden="true">*</span></label>
+          <select id="doc-type" required>
+            <option value="" disabled selected>Select a document</option>
+            <option value="Barangay Clearance">Barangay Clearance</option>
+            <option value="Certificate of Residency">Certificate of Residency</option>
+            <option value="Certificate of Indigency">Certificate of Indigency</option>
+            <option value="Business Permit Endorsement">Business Permit Endorsement</option>
+          </select>
 
-  <!-- ===== TAB 2: DIRECTORY & NOTICES ===== -->
-  <section id="directory" class="panel" role="tabpanel">
-    <h2>Barangay officials</h2>
-    <div id="officials-grid" class="id-card-grid"></div>
+          <label for="doc-purpose">Purpose <span aria-hidden="true">*</span></label>
+          <input id="doc-purpose" type="text" placeholder="Job application, school requirement" required>
 
-    <h2 class="notices-heading">Notice board</h2>
-    <div id="notices-board" class="corkboard"></div>
-  </section>
+          <label for="doc-name">Full name <span aria-hidden="true">*</span></label>
+          <input id="doc-name" type="text" placeholder="Juan Dela Cruz" required>
 
-  <!-- ===== TAB 3: REPORT A CONCERN ===== -->
-  <section id="reports" class="panel" role="tabpanel">
-    <div class="panel__grid">
+          <label for="doc-contact">Contact number <span aria-hidden="true">*</span></label>
+          <input id="doc-contact" type="tel" placeholder="09XX XXX XXXX" required>
 
-      <form id="report-form" class="counter-form">
+          <button type="submit" class="btn btn--green">Submit request</button>
+        </form>
+
+        <div class="stub-area">
+          <div id="stub-placeholder" class="stub-placeholder">
+            <p>Your claim stub will appear here once you submit a request.</p>
+          </div>
+          <div id="stub-output"></div>
+        </div>
+      </div>
+
+      <div class="request-list">
+        <div class="list-heading">
+          <div>
+            <h3>Recent requests</h3>
+            <p class="hint">Tap a status to simulate a desk update.</p>
+          </div>
+        </div>
+        <div id="request-list-items" class="stub-stack"></div>
+      </div>
+    </section>
+
+    <section id="directory" class="panel" role="tabpanel" hidden>
+      <div class="section-intro">
+        <p class="eyebrow">Window 02</p>
+        <h2>Directory &amp; notices</h2>
+        <p class="hint">Meet the people at the hall and keep up with announcements for the community.</p>
+      </div>
+      <h3>Barangay officials</h3>
+      <div id="officials-grid" class="id-card-grid"></div>
+      <h3 class="notices-heading">Notice board</h3>
+      <div id="notices-board" class="corkboard"></div>
+    </section>
+
+    <section id="reports" class="panel" role="tabpanel" hidden>
+      <div class="section-intro">
+        <p class="eyebrow">Window 03</p>
         <h2>Report a concern</h2>
         <p class="hint">For non-emergencies. For anything urgent, call the barangay hotline directly.</p>
-
-        <label for="report-type">Type of concern</label>
-        <select id="report-type" required>
-          <option value="" disabled selected>Select a category</option>
-          <option value="Noise complaint">Noise complaint</option>
-          <option value="Street light / infrastructure">Street light / infrastructure</option>
-          <option value="Garbage & sanitation">Garbage &amp; sanitation</option>
-          <option value="Dispute between neighbors">Dispute between neighbors</option>
-          <option value="Stray animal">Stray animal</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <label for="report-location">Location</label>
-        <input id="report-location" type="text" placeholder="Street / Purok / Landmark" required>
-
-        <label for="report-desc">Description</label>
-        <textarea id="report-desc" rows="3" placeholder="What's going on?" required></textarea>
-
-        <label class="checkbox-label">
-          <input type="checkbox" id="report-anon">
-          Report anonymously
-        </label>
-
-        <div id="report-contact-wrap">
-          <label for="report-contact">Contact number (optional)</label>
-          <input id="report-contact" type="tel" placeholder="09XX XXX XXXX">
-        </div>
-
-        <button type="submit" class="btn btn--red">Submit report</button>
-      </form>
-
-      <div class="reports-list">
-        <h3>Recent reports</h3>
-        <p class="hint">Status updates as the tanod team responds.</p>
-        <div id="report-list-items" class="slip-stack"></div>
       </div>
 
-    </div>
-  </section>
+      <div class="panel__grid">
+        <form id="report-form" class="counter-form">
+          <h3>Tell the desk what is happening</h3>
+          <p class="hint">A clear location and description help the tanod team respond faster.</p>
 
-</main>
+          <label for="report-type">Type of concern <span aria-hidden="true">*</span></label>
+          <select id="report-type" required>
+            <option value="" disabled selected>Select a category</option>
+            <option value="Noise complaint">Noise complaint</option>
+            <option value="Street light / infrastructure">Street light / infrastructure</option>
+            <option value="Garbage &amp; sanitation">Garbage &amp; sanitation</option>
+            <option value="Dispute between neighbors">Dispute between neighbors</option>
+            <option value="Stray animal">Stray animal</option>
+            <option value="Other">Other</option>
+          </select>
 
-<footer class="hall-footer">
-  <p>Digital Barangay App — a front desk that never closes. Built for Barangay San Isidro.</p>
-</footer>
+          <label for="report-location">Location <span aria-hidden="true">*</span></label>
+          <input id="report-location" type="text" placeholder="Street / Purok / Landmark" required>
 
-<script src="script.js"></script>
+          <label for="report-desc">Description <span aria-hidden="true">*</span></label>
+          <textarea id="report-desc" rows="4" placeholder="What's going on?" required></textarea>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="report-anon">
+            <span>Report anonymously</span>
+          </label>
+
+          <div id="report-contact-wrap">
+            <label for="report-contact">Contact number (optional)</label>
+            <input id="report-contact" type="tel" placeholder="09XX XXX XXXX">
+          </div>
+
+          <button type="submit" class="btn btn--red">Submit report</button>
+        </form>
+
+        <div class="reports-list">
+          <h3>Recent reports</h3>
+          <p class="hint">Status updates as the tanod team responds.</p>
+          <div id="report-list-items" class="slip-stack"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hall-footer">
+    <p>Digital Barangay App — a front desk that never closes.</p>
+    <span>Built for Barangay San Isidro</span>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
