@@ -1,43 +1,12 @@
-/* ============ TAB SWITCHING ============ */
-const tabs = document.querySelectorAll('.tab');
-const panels = document.querySelectorAll('.panel');
-
-tabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    tabs.forEach(t => { t.classList.remove('tab--active'); t.setAttribute('aria-selected', 'false'); });
-    panels.forEach(p => p.classList.remove('panel--active'));
-
-    tab.classList.add('tab--active');
-    tab.setAttribute('aria-selected', 'true');
-    document.getElementById(tab.dataset.tab).classList.add('panel--active');
-  });
-});
-
-/* ============ STORAGE HELPERS ============ */
 const STORE = {
   requests: 'barangay_requests',
   reports: 'barangay_reports',
   seeded: 'barangay_seeded'
 };
 
-function load(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
+const REQUEST_FLOW = ['Pending', 'Ready', 'Claimed'];
+const REPORT_FLOW = ['Received', 'In Progress', 'Resolved'];
 
-function save(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error('Could not save', e);
-  }
-}
-
-/* ============ SEED DATA (first run only) ============ */
 const OFFICIALS = [
   { role: 'Barangay Captain', name: 'Hon. Ramon Villareal', contact: '0917 200 1188' },
   { role: 'Kagawad — Peace & Order', name: 'Hon. Teresa Ocampo', contact: '0918 344 7712' },
@@ -53,82 +22,64 @@ const NOTICES = [
   { title: 'Barangay Assembly', body: 'Quarterly assembly this Sunday, 2PM at the covered court. Attendance is per household.', date: 'Aug 18, 2026', color: 'gold' }
 ];
 
-function seedIfNeeded() {
-  if (localStorage.getItem(STORE.seeded)) return;
-
-  save(STORE.requests, [
-    { id: genTrackingId(), doc: 'Barangay Clearance', purpose: 'Job application', name: 'Sample Resident', contact: '0917 000 0000', status: 'Ready', date: shortDate() }
-  ]);
-  save(STORE.reports, [
-    { id: genTrackingId(), type: 'Street light / infrastructure', location: 'Purok 4, near basketball court', desc: 'Street light has been out for a week.', anon: false, contact: '0917 000 0000', status: 'In Progress', date: shortDate() }
-  ]);
-
-  localStorage.setItem(STORE.seeded, '1');
+function load(key) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : [];
+  } catch {
+    return [];
+  }
 }
 
-/* ============ UTILITIES ============ */
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
 function genTrackingId() {
-  const n = Math.floor(1000 + Math.random() * 9000);
-  return 'BSI-' + new Date().getFullYear() + '-' + n;
+  return `BSI-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 function shortDate() {
   return new Date().toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 }
 
-/* ============ RENDER: DIRECTORY ============ */
+function seedIfNeeded() {
+  if (localStorage.getItem(STORE.seeded)) return;
+  save(STORE.requests, [{
+    id: genTrackingId(), doc: 'Barangay Clearance', purpose: 'Job application',
+    name: 'Sample Resident', contact: '0917 000 0000', status: 'Ready', date: shortDate()
+  }]);
+  save(STORE.reports, [{
+    id: genTrackingId(), type: 'Street light / infrastructure',
+    location: 'Purok 4, near basketball court', desc: 'Street light has been out for a week.',
+    anon: false, contact: '0917 000 0000', status: 'In Progress', date: shortDate()
+  }]);
+  localStorage.setItem(STORE.seeded, '1');
+}
+
 function renderOfficials() {
-  const grid = document.getElementById('officials-grid');
-  grid.innerHTML = OFFICIALS.map(o => `
-    <div class="id-card">
-      <div class="id-card__role">${o.role}</div>
-      <div class="id-card__name">${o.name}</div>
-      <div class="id-card__contact">${o.contact}</div>
-    </div>
+  document.getElementById('officials-grid').innerHTML = OFFICIALS.map((official) => `
+    <article class="id-card">
+      <div class="id-card__role">${official.role}</div>
+      <div class="id-card__name">${official.name}</div>
+      <div class="id-card__contact">${official.contact}</div>
+    </article>
   `).join('');
 }
 
 function renderNotices() {
-  const board = document.getElementById('notices-board');
-  board.innerHTML = NOTICES.map(n => `
-    <div class="notice notice--${n.color}">
-      <div class="notice__title">${n.title}</div>
-      <div class="notice__body">${n.body}</div>
-      <span class="notice__date">Posted ${n.date}</span>
-    </div>
+  document.getElementById('notices-board').innerHTML = NOTICES.map((notice) => `
+    <article class="notice notice--${notice.color}">
+      <div class="notice__title">${notice.title}</div>
+      <div class="notice__body">${notice.body}</div>
+      <span class="notice__date">Posted ${notice.date}</span>
+    </article>
   `).join('');
 }
 
-/* ============ REQUEST FORM ============ */
-const requestForm = document.getElementById('request-form');
-const stubOutput = document.getElementById('stub-output');
-const stubPlaceholder = document.getElementById('stub-placeholder');
-
-requestForm.addEventListener('submit', e => {
-  e.preventDefault();
-
-  const entry = {
-    id: genTrackingId(),
-    doc: document.getElementById('doc-type').value,
-    purpose: document.getElementById('doc-purpose').value,
-    name: document.getElementById('doc-name').value,
-    contact: document.getElementById('doc-contact').value,
-    status: 'Pending',
-    date: shortDate()
-  };
-
-  const all = load(STORE.requests);
-  all.unshift(entry);
-  save(STORE.requests, all);
-
-  renderStub(entry);
-  renderRequestList();
-  requestForm.reset();
-});
-
 function renderStub(entry) {
-  stubPlaceholder.style.display = 'none';
-  stubOutput.innerHTML = `
+  document.getElementById('stub-placeholder').hidden = true;
+  document.getElementById('stub-output').innerHTML = `
     <div class="stub">
       <div class="stub__eyebrow">Claim stub</div>
       <div class="stub__doc">${entry.doc}</div>
@@ -142,102 +93,113 @@ function renderStub(entry) {
 }
 
 function renderRequestList() {
-  const wrap = document.getElementById('request-list-items');
-  const all = load(STORE.requests);
-
-  if (all.length === 0) {
-    wrap.innerHTML = '<p class="hint">No requests yet.</p>';
+  const requests = load(STORE.requests);
+  const target = document.getElementById('request-list-items');
+  if (!requests.length) {
+    target.innerHTML = '<p class="hint">No requests yet.</p>';
     return;
   }
-
-  wrap.innerHTML = all.map(r => `
+  target.innerHTML = requests.map((request) => `
     <div class="mini-stub">
       <div class="mini-stub__info">
-        <span class="mini-stub__doc">${r.doc}</span>
-        <span class="mini-stub__meta">${r.id} · filed ${r.date}</span>
+        <span class="mini-stub__doc">${request.doc}</span>
+        <span class="mini-stub__meta">${request.id} · filed ${request.date}</span>
       </div>
-      <button class="status-badge status-${r.status.replace(' ', '-')}" data-id="${r.id}" data-kind="request">${r.status}</button>
+      <button class="status-badge status-${request.status.replaceAll(' ', '-')}" data-id="${request.id}" data-kind="request">${request.status}</button>
     </div>
   `).join('');
 }
 
-/* ============ REPORT FORM ============ */
-const reportForm = document.getElementById('report-form');
+function renderReportList() {
+  const reports = load(STORE.reports);
+  const target = document.getElementById('report-list-items');
+  if (!reports.length) {
+    target.innerHTML = '<p class="hint">No reports yet.</p>';
+    return;
+  }
+  target.innerHTML = reports.map((report) => `
+    <div class="slip">
+      <div class="slip__info">
+        <span class="slip__type">${report.type}</span>
+        <span class="slip__meta">${report.id} · ${report.location}</span>
+      </div>
+      <button class="status-badge status-${report.status.replaceAll(' ', '-')}" data-id="${report.id}" data-kind="report">${report.status}</button>
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((item) => {
+      item.classList.toggle('tab--active', item === tab);
+      item.setAttribute('aria-selected', item === tab ? 'true' : 'false');
+    });
+    document.querySelectorAll('.panel').forEach((panel) => {
+      panel.hidden = panel.id !== tab.dataset.tab;
+      panel.classList.toggle('panel--active', panel.id === tab.dataset.tab);
+    });
+  });
+});
+
+document.getElementById('request-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const entry = {
+    id: genTrackingId(),
+    doc: document.getElementById('doc-type').value,
+    purpose: document.getElementById('doc-purpose').value.trim(),
+    name: document.getElementById('doc-name').value.trim(),
+    contact: document.getElementById('doc-contact').value.trim(),
+    status: 'Pending',
+    date: shortDate()
+  };
+  const requests = load(STORE.requests);
+  requests.unshift(entry);
+  save(STORE.requests, requests);
+  renderStub(entry);
+  renderRequestList();
+  event.target.reset();
+});
+
 const anonCheckbox = document.getElementById('report-anon');
 const contactWrap = document.getElementById('report-contact-wrap');
 
 anonCheckbox.addEventListener('change', () => {
-  contactWrap.style.display = anonCheckbox.checked ? 'none' : 'block';
+  contactWrap.hidden = anonCheckbox.checked;
 });
 
-reportForm.addEventListener('submit', e => {
-  e.preventDefault();
-
+document.getElementById('report-form').addEventListener('submit', (event) => {
+  event.preventDefault();
   const entry = {
     id: genTrackingId(),
     type: document.getElementById('report-type').value,
-    location: document.getElementById('report-location').value,
-    desc: document.getElementById('report-desc').value,
+    location: document.getElementById('report-location').value.trim(),
+    desc: document.getElementById('report-desc').value.trim(),
     anon: anonCheckbox.checked,
-    contact: anonCheckbox.checked ? '' : document.getElementById('report-contact').value,
+    contact: anonCheckbox.checked ? '' : document.getElementById('report-contact').value.trim(),
     status: 'Received',
     date: shortDate()
   };
-
-  const all = load(STORE.reports);
-  all.unshift(entry);
-  save(STORE.reports, all);
-
+  const reports = load(STORE.reports);
+  reports.unshift(entry);
+  save(STORE.reports, reports);
   renderReportList();
-  reportForm.reset();
-  contactWrap.style.display = 'block';
+  event.target.reset();
+  contactWrap.hidden = false;
 });
 
-function renderReportList() {
-  const wrap = document.getElementById('report-list-items');
-  const all = load(STORE.reports);
-
-  if (all.length === 0) {
-    wrap.innerHTML = '<p class="hint">No reports yet.</p>';
-    return;
-  }
-
-  wrap.innerHTML = all.map(r => `
-    <div class="slip">
-      <div class="slip__info">
-        <span class="slip__type">${r.type}</span>
-        <span class="slip__meta">${r.id} · ${r.location}</span>
-      </div>
-      <button class="status-badge status-${r.status.replace(' ', '-')}" data-id="${r.id}" data-kind="report">${r.status}</button>
-    </div>
-  `).join('');
-}
-
-/* ============ STATUS CYCLING (simulated staff action) ============ */
-const REQUEST_FLOW = ['Pending', 'Ready', 'Claimed'];
-const REPORT_FLOW = ['Received', 'In Progress', 'Resolved'];
-
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.status-badge');
-  if (!btn) return;
-
-  const kind = btn.dataset.kind;
-  const id = btn.dataset.id;
-  const key = kind === 'request' ? STORE.requests : STORE.reports;
-  const flow = kind === 'request' ? REQUEST_FLOW : REPORT_FLOW;
-
-  const all = load(key);
-  const item = all.find(x => x.id === id);
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('.status-badge');
+  if (!button) return;
+  const key = button.dataset.kind === 'request' ? STORE.requests : STORE.reports;
+  const flow = button.dataset.kind === 'request' ? REQUEST_FLOW : REPORT_FLOW;
+  const items = load(key);
+  const item = items.find((entry) => entry.id === button.dataset.id);
   if (!item) return;
-
-  const nextIndex = (flow.indexOf(item.status) + 1) % flow.length;
-  item.status = flow[nextIndex];
-  save(key, all);
-
-  kind === 'request' ? renderRequestList() : renderReportList();
+  item.status = flow[(flow.indexOf(item.status) + 1) % flow.length];
+  save(key, items);
+  button.dataset.kind === 'request' ? renderRequestList() : renderReportList();
 });
 
-/* ============ INIT ============ */
 seedIfNeeded();
 renderOfficials();
 renderNotices();
