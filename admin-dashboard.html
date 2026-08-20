@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Admin Dashboard — Digital Barangay App</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+</head>
+<body class="admin-body">
+  <header class="hall-header">
+    <div class="hall-header__inner">
+      <div class="seal" aria-hidden="true">BSI</div>
+      <div>
+        <p class="eyebrow">Staff Portal</p>
+        <h1>Admin Dashboard</h1>
+        <p class="tagline">Barangay San Isidro</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-topbar">
+    <div>
+      <span class="role-badge">Admin</span>
+      <strong id="welcome-name" style="margin-left:8px;"></strong>
+    </div>
+    <button id="logout-btn" class="btn btn--ghost" type="button">Log out</button>
+  </div>
+
+  <main class="admin-panel counter-form">
+    <h3>You're signed in as staff</h3>
+    <p class="hint">This page only renders after the server confirms your token is valid and your account has the <code>admin</code> role. Requests, officials, notices, and concerns management modules plug in here next.</p>
+  </main>
+
+  <footer class="hall-footer">
+    <p>Digital Barangay App — staff portal</p>
+  </footer>
+
+  <script>
+    document.addEventListener('admin-auth-ready', (e) => {
+      document.getElementById('welcome-name').textContent = `Welcome, ${e.detail.user.fullName}`;
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      clearSession();
+      location.replace('admin-login.html');
+    });
+  </script>
+</body>
+</html>
