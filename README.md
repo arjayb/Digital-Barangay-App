@@ -15,7 +15,7 @@ Static frontend for the Digital Barangay full-stack app: a public front desk dem
 | `index.html` | Public front desk demo (request documents, directory & notices, report a concern) | none — currently a standalone localStorage demo, not yet wired to the API |
 | `member-login.html` | Resident sign-in | calls `POST /api/auth/login` |
 | `admin-login.html` | Staff-only sign-in; rejects non-admin accounts even with valid credentials | calls `POST /api/auth/login`, checks `role === 'admin'` |
-| `admin-dashboard.html` | Protected shell for staff tools (requests, notices, officials, concerns management plug in here) | guarded by `assets/js/admin-guard.js` |
+| `admin-dashboard.html` | Protected shell for staff tools (requests, notices, officials, concerns management plug in here) | guarded by `admin-guard.js` |
 
 ## How the auth split works
 
@@ -27,7 +27,7 @@ The backend has one login endpoint that returns the account's `role` (`resident`
 
 ## Setup
 
-1. Open `assets/js/api.js` and set `API_BASE_URL` to your deployed Render backend URL.
+1. Open `api.js` and set `API_BASE_URL` to your deployed Render backend URL.
 2. Confirm `CORS_ORIGIN` on Render matches your GitHub Pages origin.
 3. Create your first admin with the backend's seed script (see the backend README), then sign in at `admin-login.html`.
 
