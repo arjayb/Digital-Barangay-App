@@ -1,7 +1,7 @@
 /**
  * api.js — shared API client + session storage for the Digital Barangay App.
  *
- * TODO: set this to your deployed Render backend URL, e.g.
+ * Set API_BASE_URL to the deployed Render backend URL, for example:
  *   const API_BASE_URL = 'https://digital-barangay-backend.onrender.com';
  * Leave the /api suffix off — it's added per-call below.
  */
