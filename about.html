@@ -2,21 +2,36 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="About the Digital Barangay App">
+<meta name="description" content="About the Digital Barangay App — a full-stack resident and barangay staff portal">
 <title>About — Digital Barangay App</title>
 <link rel="stylesheet" href="style.css">
 <style>
-.about-main{max-width:1000px;margin:40px auto;padding:0 20px}.about-card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:28px;margin-bottom:20px}.about-card h2{margin-top:0}.stack{display:flex;flex-wrap:wrap;gap:10px}.stack span{padding:8px 12px;border:1px solid #ddd;border-radius:999px;font-size:14px}.about-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.about-main{max-width:1000px;margin:40px auto;padding:0 20px}.about-card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:28px;margin-bottom:20px}.about-card h2{margin-top:0}.about-card p{line-height:1.7}.about-card li{margin:8px 0;line-height:1.5}.stack{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.stack span{padding:8px 12px;border:1px solid #ddd;border-radius:999px;font-size:14px}.about-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.about-actions a{text-decoration:none}.architecture{background:#f7f7f3;border:1px solid #ddd;border-radius:10px;padding:18px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px;line-height:1.5}.eyebrow{margin-bottom:6px}
 </style>
 </head>
 <body>
-<header class="hall-header"><div class="hall-header__inner"><div class="seal" aria-hidden="true">BSI</div><div><p class="eyebrow">About</p><h1>Digital Barangay App</h1><p class="tagline">A digital front desk for Barangay San Isidro.</p></div></div></header>
+<header class="hall-header"><div class="hall-header__inner"><div class="seal" aria-hidden="true">BSI</div><div><p class="eyebrow">About the project</p><h1>Digital Barangay App</h1><p class="tagline">A full-stack digital front desk for Barangay San Isidro.</p></div></div></header>
 <main class="about-main">
-<section class="about-card"><p class="eyebrow">The project</p><h2>A better barangay front desk</h2><p>Digital Barangay connects residents and barangay staff through one online workflow. Residents can create accounts, request documents, report non-emergency concerns and track updates. Staff can review submissions and manage their status from a protected admin dashboard.</p></section>
-<section class="about-card"><h2>What residents can do</h2><ul><li>Create and manage a resident account.</li><li>Submit document requests and receive a tracking number.</li><li>Report community concerns with location and description.</li><li>Track request and concern status from the resident dashboard.</li><li>View published barangay officials and notices.</li></ul></section>
-<section class="about-card"><h2>What staff can do</h2><ul><li>View live resident activity.</li><li>Review document requests.</li><li>Move requests through pending, review, approval and completion.</li><li>Review concerns and update their response status.</li><li>Operate through protected admin authentication.</li></ul></section>
-<section class="about-card"><h2>Full-stack architecture</h2><p>This is a real full-stack application rather than a static website. The frontend is published through GitHub Pages, the Express API runs on Render, Prisma handles database access, and PostgreSQL is hosted by Neon.</p><div class="stack"><span>HTML / CSS / JavaScript</span><span>GitHub Pages</span><span>Node.js / Express</span><span>Render</span><span>Prisma</span><span>Neon PostgreSQL</span><span>JWT Authentication</span></div></section>
-<section class="about-card"><h2>Navigation</h2><p>Ready to use the front desk?</p><div class="about-actions"><a class="btn btn--green" href="index.html">Open Front Desk</a><a class="btn btn--green" href="member-register.html">Resident Registration</a><a class="btn btn--green" href="member-login.html">Resident Login</a><a class="btn btn--ghost" href="admin-login.html">Staff Login</a></div></section>
+<section class="about-card"><p class="eyebrow">THE PROJECT</p><h2>From a front desk prototype to a full-stack application</h2><p>Digital Barangay is designed to make routine barangay services easier to access and easier to manage. Residents can create an account, submit document requests, report non-emergency concerns, and track progress online. Barangay staff use a protected admin portal to review submissions and update their status.</p><p>This public interface is backed by a deployed API and PostgreSQL database, so the application demonstrates a complete resident-to-staff workflow rather than a static mockup.</p></section>
+<section class="about-card"><p class="eyebrow">RESIDENT EXPERIENCE</p><h2>What residents can do</h2><ul><li>Create a resident account and sign in securely.</li><li>Submit barangay document requests and receive a backend-generated tracking number.</li><li>Report non-emergency community concerns with location and description.</li><li>Track request and concern status from the resident dashboard.</li><li>View published barangay officials and community notices.</li></ul></section>
+<section class="about-card"><p class="eyebrow">STAFF EXPERIENCE</p><h2>What barangay staff can do</h2><ul><li>Sign in through protected admin authentication.</li><li>View live resident requests and concerns.</li><li>Review document requests and move them through their workflow.</li><li>Update concern status as the barangay responds.</li><li>Manage the operational side of the resident service portal.</li></ul></section>
+<section class="about-card"><p class="eyebrow">TECHNICAL ARCHITECTURE</p><h2>A real full-stack deployment</h2><p>The frontend is served through GitHub Pages. It communicates with a Node.js/Express API deployed on Render. Prisma provides database access to PostgreSQL hosted on Neon, while JWT authentication protects resident and staff workflows.</p><pre class="architecture">Resident / Admin Browser
+          |
+          v
+   GitHub Pages frontend
+          |
+       HTTPS API
+          |
+          v
+   Render / Express API
+          |
+       Prisma ORM
+          |
+          v
+      Neon PostgreSQL
+
+Uploads -> Cloudinary</pre><div class="stack"><span>HTML / CSS / JavaScript</span><span>GitHub Pages</span><span>Node.js / Express</span><span>Render</span><span>Prisma</span><span>Neon PostgreSQL</span><span>JWT</span><span>Cloudinary</span></div></section>
+<section class="about-card"><p class="eyebrow">LIVE APPLICATION</p><h2>Try the application</h2><p>Use the public front desk to explore the interface. Resident registration and staff operations are available through their respective portals.</p><div class="about-actions"><a class="btn btn--green" href="index.html">Open Front Desk</a><a class="btn btn--green" href="member-register.html">Resident Registration</a><a class="btn btn--green" href="member-login.html">Resident Login</a><a class="btn btn--ghost" href="admin-login.html">Staff Login</a></div></section>
 </main>
-<footer class="hall-footer"><p>Digital Barangay App — Barangay San Isidro</p><span><a href="index.html">Back to front desk</a></span></footer>
+<footer class="hall-footer"><p>Digital Barangay App — Barangay San Isidro</p><span><a href="index.html">Back to front desk</a> · <a href="https://github.com/arjayb/Digital-Barangay-App">View source on GitHub</a></span></footer>
 </body></html>
