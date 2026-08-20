@@ -1,84 +1,55 @@
-/**
- * api.js — shared API client + session storage for the Digital Barangay App.
- *
- * Set API_BASE_URL to the deployed Render backend URL, for example:
- *   const API_BASE_URL = 'https://digital-barangay-backend.onrender.com';
- * Leave the /api suffix off — it's added per-call below.
- */
-const API_BASE_URL = 'https://YOUR-RENDER-APP.onrender.com';
+/** Shared API client for the GitHub Pages frontend. */
+const API_BASE_URL = 'https://digital-barangay-backend.onrender.com';
+const SESSION_KEY = 'db_session';
 
-const SESSION_KEY = 'db_session'; // { token, user: { id, fullName, email, role } }
-
-/* ---------- low-level request helper ---------- */
-
-async function apiRequest(path, { method = 'GET', body, auth = false } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-
+async function apiRequest(path, { method = 'GET', body, auth = false, formData = false } = {}) {
+  const headers = {};
+  if (!formData) headers['Content-Type'] = 'application/json';
   if (auth) {
     const session = getSession();
-    if (session && session.token) {
-      headers.Authorization = `Bearer ${session.token}`;
-    }
+    if (session?.token) headers.Authorization = `Bearer ${session.token}`;
   }
-
   let response;
   try {
     response = await fetch(`${API_BASE_URL}/api${path}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: formData ? body : (body ? JSON.stringify(body) : undefined),
     });
-  } catch (networkErr) {
+  } catch {
     throw new Error('Could not reach the server. Check your connection and try again.');
   }
-
   let data = null;
-  try {
-    data = await response.json();
-  } catch {
-    // no JSON body (e.g. 204)
-  }
-
+  try { data = await response.json(); } catch {}
   if (!response.ok) {
-    const message = (data && data.message) || `Request failed (${response.status})`;
-    const err = new Error(message);
-    err.status = response.status;
-    throw err;
+    const error = new Error(data?.message || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
-
   return data;
 }
 
-/* ---------- auth endpoints ---------- */
+function login(email, password) { return apiRequest('/auth/login', { method: 'POST', body: { email, password } }); }
+function registerUser(fullName, email, password) { return apiRequest('/auth/register', { method: 'POST', body: { fullName, email, password } }); }
+function fetchMe() { return apiRequest('/auth/me', { auth: true }); }
+function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } }
+function setSession(token, user) { localStorage.setItem(SESSION_KEY, JSON.stringify({ token, user })); }
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+function isLoggedInAs(role) { const s = getSession(); return !!(s?.token && s?.user?.role === role); }
 
-function login(email, password) {
-  return apiRequest('/auth/login', { method: 'POST', body: { email, password } });
+function getMyRequests() { return apiRequest('/requests', { auth: true }); }
+function createRequest({ documentType, purpose, attachments = [] }) {
+  if (!attachments.length) return apiRequest('/requests', { method: 'POST', body: { documentType, purpose }, auth: true });
+  const form = new FormData(); form.append('documentType', documentType); form.append('purpose', purpose);
+  attachments.forEach(file => form.append('attachments', file));
+  return apiRequest('/requests', { method: 'POST', body: form, auth: true, formData: true });
 }
-
-function fetchMe() {
-  return apiRequest('/auth/me', { auth: true });
+function getMyConcerns() { return apiRequest('/concerns', { auth: true }); }
+function createConcern({ category, description, attachments = [] }) {
+  if (!attachments.length) return apiRequest('/concerns', { method: 'POST', body: { category, description }, auth: true });
+  const form = new FormData(); form.append('category', category); form.append('description', description);
+  attachments.forEach(file => form.append('attachments', file));
+  return apiRequest('/concerns', { method: 'POST', body: form, auth: true, formData: true });
 }
-
-/* ---------- session storage ---------- */
-
-function getSession() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function setSession(token, user) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, user }));
-}
-
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-function isLoggedInAs(role) {
-  const session = getSession();
-  return !!(session && session.token && session.user && session.user.role === role);
-}
+function getOfficials() { return apiRequest('/officials'); }
+function getNotices() { return apiRequest('/notices'); }
