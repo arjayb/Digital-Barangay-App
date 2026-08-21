@@ -8,29 +8,15 @@
  */
 (async function guardAdminPage() {
   const session = getSession();
-
-  if (!session || !session.token || !session.user || session.user.role !== 'admin') {
-    redirectToLogin();
-    return;
-  }
-
+  if (!session || !session.token || !session.user || session.user.role !== 'admin') { redirectToLogin(); return; }
   try {
-    const { user } = await fetchMe(); // throws on invalid/expired token
-    if (user.role !== 'admin') {
-      clearSession();
-      redirectToLogin();
-      return;
-    }
-    // keep the cached copy fresh in case fullName/email changed
+    const { user } = await fetchMe();
+    if (user.role !== 'admin') { clearSession(); redirectToLogin(); return; }
     setSession(session.token, user);
     document.dispatchEvent(new CustomEvent('admin-auth-ready', { detail: { user } }));
-  } catch (err) {
-    clearSession();
-    redirectToLogin();
-  }
-
+  } catch (err) { clearSession(); redirectToLogin(); }
   function redirectToLogin() {
     const next = encodeURIComponent(location.pathname + location.search);
-    location.replace(`admin-login.html?next=${next}`);
+    location.replace(`index.html?mode=admin&next=${next}`);
   }
 })();
