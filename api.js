@@ -40,3 +40,16 @@ function updateRequestStatus(id, status, note = '') { return apiRequest(`/admin/
 function getAdminConcerns(params = {}) { return apiRequest(`/admin/concerns${toQuery(params)}`, { auth: true }); }
 function updateConcernStatus(id, status) { return apiRequest(`/admin/concerns/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: { status }, auth: true }); }
 function getAdminUsers(params = {}) { return apiRequest(`/admin/users${toQuery(params)}`, { auth: true }); }
+
+// v1.1.0 — member claim/confirm actions
+function confirmRequestClaimed(id) { return apiRequest(`/requests/${encodeURIComponent(id)}/claim`, { method: 'PATCH', auth: true }); }
+function confirmConcernResolved(id) { return apiRequest(`/concerns/${encodeURIComponent(id)}/confirm-resolved`, { method: 'PATCH', auth: true }); }
+
+// v1.1.0 — Webmaster credential governance
+function getAdminApplications(params = {}) { return apiRequest(`/webmaster/applications${toQuery(params)}`, { auth: true }); }
+function approveAdminApplication(id, reviewNote = '') { return apiRequest(`/webmaster/applications/${encodeURIComponent(id)}/approve`, { method: 'PATCH', body: { reviewNote }, auth: true }); }
+function rejectAdminApplication(id, reviewNote) { return apiRequest(`/webmaster/applications/${encodeURIComponent(id)}/reject`, { method: 'PATCH', body: { reviewNote }, auth: true }); }
+function getWebmasterAdmins() { return apiRequest('/webmaster/admins', { auth: true }); }
+function suspendAdminAccount(id, note = '') { return apiRequest(`/webmaster/admins/${encodeURIComponent(id)}/suspend`, { method: 'PATCH', body: { note }, auth: true }); }
+function reactivateAdminAccount(id, note = '') { return apiRequest(`/webmaster/admins/${encodeURIComponent(id)}/reactivate`, { method: 'PATCH', body: { note }, auth: true }); }
+function getCredentialHistory() { return apiRequest('/webmaster/credential-history', { auth: true }); }

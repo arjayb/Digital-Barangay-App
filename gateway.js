@@ -11,7 +11,13 @@
   // Same-app pages a `next` value is allowed to point at. Anything else
   // (a different host, a path outside this list, an absolute/protocol-
   // relative URL) is ignored — see routeForRole().
-  const ALLOWED_DESTINATIONS = ['member-dashboard.html', 'admin-dashboard.html'];
+  const ALLOWED_DESTINATIONS = ['member-dashboard.html', 'admin-dashboard.html', 'webmaster-dashboard.html'];
+
+  // v1.1.0: Admin Login accepts both `admin` and `webmaster` — there is no
+  // separate Webmaster login page or selector (BUILD-SPEC-DBA-001 §4). The
+  // authenticated backend role alone decides which of the two dashboards a
+  // successful Admin Login lands on; the person never chooses.
+  const ADMIN_MODE_ROLES = ['admin', 'webmaster'];
 
   const params = new URLSearchParams(location.search);
   const next = params.get('next');
@@ -30,7 +36,7 @@
   const existing = getSession();
   if (
     existing?.token && existing?.user &&
-    ((mode === 'admin' && existing.user.role === 'admin') ||
+    ((mode === 'admin' && ADMIN_MODE_ROLES.includes(existing.user.role)) ||
       (mode === 'member' && existing.user.role === 'resident'))
   ) {
     routeForRole(existing.user.role, next);
@@ -48,7 +54,7 @@
     setLoading(true);
     try {
       const { token, user } = await login(email, password);
-      if (mode === 'admin' && user.role !== 'admin') {
+      if (mode === 'admin' && !ADMIN_MODE_ROLES.includes(user.role)) {
         showError('This account does not have staff access.');
         return;
       }
@@ -86,7 +92,7 @@
   }
 
   function routeForRole(role, nextParam) {
-    const dest = role === 'admin' ? 'admin-dashboard.html' : 'member-dashboard.html';
+    const dest = role === 'admin' ? 'admin-dashboard.html' : role === 'webmaster' ? 'webmaster-dashboard.html' : 'member-dashboard.html';
     const safeNext = ALLOWED_DESTINATIONS.includes(nextParam) && nextParam === dest ? nextParam : null;
     location.replace(safeNext || dest);
   }

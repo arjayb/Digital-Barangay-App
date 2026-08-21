@@ -21,10 +21,12 @@ const CONCERN_STATUS_LABEL = {
   open: 'Open',
   in_progress: 'In progress',
   resolved: 'Resolved',
+  closed: 'Closed',
 };
 
 let requestsCache = [];
 let concernsCache = [];
+let currentUser = null;
 
 /* ---------------------------------------------------------------- utils */
 
@@ -121,15 +123,55 @@ function renderDashboard() {
 function renderRequestsTable() {
   const body = document.getElementById('requests-body');
   body.innerHTML = requestsCache.length
-    ? requestsCache.map((r) => `<tr><td><strong>${esc(r.documentType)}</strong></td><td>${esc(r.purpose)}</td><td>${fmtDateTime(r.createdAt)}</td><td>${badge(r.status, REQUEST_STATUS_LABEL)}</td><td>${esc(r.trackingNumber || r.id || '—')}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="empty-row">You have not submitted any document requests yet.</td></tr>';
+    ? requestsCache.map((r) => {
+        const rejectionNote = getRejectionNote(r);
+        const action = r.status === 'ready_for_pickup'
+          ? `<div class="quick-actions">
+               <button type="button" class="btn btn--ghost" data-download-stub="${esc(r.id)}">Download Claim Stub</button>
+               <button type="button" class="btn btn--green" data-claim="${esc(r.id)}">Claimed</button>
+             </div>`
+          : '—';
+        return `<tr>
+          <td><strong>${esc(r.documentType)}</strong></td>
+          <td>${esc(r.purpose)}</td>
+          <td>${fmtDateTime(r.createdAt)}</td>
+          <td>${badge(r.status, REQUEST_STATUS_LABEL)}</td>
+          <td>${esc(r.trackingNumber || r.id || '—')}</td>
+          <td>${rejectionNote ? esc(rejectionNote) : '—'}</td>
+          <td>${action}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="7" class="empty-row">You have not submitted any document requests yet.</td></tr>';
 }
 
 function renderConcernsTable() {
   const body = document.getElementById('concerns-body');
   body.innerHTML = concernsCache.length
-    ? concernsCache.map((c) => `<tr><td>${esc(c.category)}</td><td>${esc(c.location || '—')}</td><td>${esc(c.description)}</td><td>${fmtDateTime(c.createdAt)}</td><td>${badge(c.status, CONCERN_STATUS_LABEL)}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="empty-row">You have not reported any concerns yet.</td></tr>';
+    ? concernsCache.map((c) => {
+        const action = c.status === 'resolved'
+          ? `<button type="button" class="btn btn--green" data-confirm-resolved="${esc(c.id)}">Confirm Resolved</button>`
+          : '—';
+        return `<tr>
+          <td>${esc(c.category)}</td>
+          <td>${esc(c.location || '—')}</td>
+          <td>${esc(c.description)}</td>
+          <td>${fmtDateTime(c.createdAt)}</td>
+          <td>${badge(c.status, CONCERN_STATUS_LABEL)}</td>
+          <td>${action}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" class="empty-row">You have not reported any concerns yet.</td></tr>';
+}
+
+// v1.1.0 — decision/history helpers. Reads only from the `history` array
+// the backend now includes on getMyRequests/getMyConcerns (already scoped
+// to the authenticated resident's own records — see requestController.js).
+function getRejectionNote(request) {
+  const entry = (request.history || []).slice().reverse().find((h) => h.toStatus === 'rejected');
+  return entry?.note || null;
+}
+function getReadyForPickupEvent(request) {
+  return (request.history || []).slice().reverse().find((h) => h.toStatus === 'ready_for_pickup') || null;
 }
 
 async function refreshAll() {
@@ -221,6 +263,129 @@ function initForms() {
   });
 }
 
+/* -------------------------------------------------------- claim actions */
+
+// v1.1.0 §19 — client-generated PNG, no server-side PDF infrastructure.
+// Downloading this causes no status transition by itself; only the
+// separate "Claimed" button (handleClaimed below) calls the API.
+function generateClaimStubCanvas(request) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 900;
+  canvas.height = 520;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#F8F5EE';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#1F5C43';
+  ctx.fillRect(0, 0, canvas.width, 110);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '700 28px Georgia, serif';
+  ctx.fillText('Barangay San Isidro', 40, 48);
+  ctx.font = '600 15px Arial';
+  ctx.fillStyle = '#DDEFE6';
+  ctx.fillText('DOCUMENT CLAIM STUB', 40, 78);
+
+  const readyEvent = getReadyForPickupEvent(request);
+  const rows = [
+    ['Resident name', currentUser?.fullName || '—'],
+    ['Document type', request.documentType],
+    ['Tracking number', request.trackingNumber || request.id],
+    ['Date filed', fmtDate(request.createdAt)],
+    ['Ready for pickup', readyEvent ? fmtDate(readyEvent.createdAt) : '—'],
+    ['Processing Staff ID', readyEvent?.actorStaffId || '—'],
+  ];
+
+  let y = 165;
+  rows.forEach(([label, value]) => {
+    ctx.font = '600 12px Arial';
+    ctx.fillStyle = '#5B6570';
+    ctx.fillText(label.toUpperCase(), 40, y);
+    ctx.font = '600 20px Arial';
+    ctx.fillStyle = '#1B1F23';
+    ctx.fillText(String(value), 40, y + 26);
+    y += 58;
+  });
+
+  ctx.font = 'italic 13px Arial';
+  ctx.fillStyle = '#5B6570';
+  wrapCanvasText(ctx, 'Present this stub (digital or printed) at the barangay hall window when claiming your document.', 40, y + 14, 820, 18);
+
+  return canvas;
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  words.forEach((word) => {
+    const test = `${line}${word} `;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = `${word} `;
+      y += lineHeight;
+    } else {
+      line = test;
+    }
+  });
+  ctx.fillText(line, x, y);
+}
+
+function downloadClaimStub(request) {
+  const canvas = generateClaimStubCanvas(request);
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${request.trackingNumber || request.id}-claim-stub.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
+async function handleClaimed(id, button) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Confirming…';
+  try {
+    await confirmRequestClaimed(id);
+    showPageAlert('Claim confirmed — request marked completed.', 'ok');
+    await refreshAll();
+  } catch (err) {
+    showPageAlert(err.message || 'Unable to confirm claim.', 'error');
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
+async function handleConfirmResolved(id, button) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Confirming…';
+  try {
+    await confirmConcernResolved(id);
+    showPageAlert('Thanks — concern marked closed.', 'ok');
+    await refreshAll();
+  } catch (err) {
+    showPageAlert(err.message || 'Unable to confirm resolution.', 'error');
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  const downloadBtn = e.target.closest('[data-download-stub]');
+  const claimBtn = e.target.closest('[data-claim]');
+  const resolveBtn = e.target.closest('[data-confirm-resolved]');
+
+  if (downloadBtn) {
+    const request = requestsCache.find((r) => r.id === downloadBtn.dataset.downloadStub);
+    if (request) downloadClaimStub(request);
+  }
+  if (claimBtn) await handleClaimed(claimBtn.dataset.claim, claimBtn);
+  if (resolveBtn) await handleConfirmResolved(resolveBtn.dataset.confirmResolved, resolveBtn);
+});
+
 /* --------------------------------------------------------------- init */
 
 document.getElementById('logout-btn').addEventListener('click', () => { clearSession(); location.replace('index.html'); });
@@ -232,6 +397,7 @@ renderNotices();
 
 document.addEventListener('member-auth-ready', (e) => {
   const user = e.detail.user;
+  currentUser = user;
   document.getElementById('welcome-name').textContent = user.fullName;
   document.getElementById('resident-email').textContent = user.email;
   refreshAll();

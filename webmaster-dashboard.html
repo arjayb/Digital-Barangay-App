@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Webmaster Dashboard — Digital Barangay App</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="admin.css">
+<script src="api.js"></script>
+<script src="webmaster-guard.js"></script>
+</head>
+<body class="admin-body">
+
+<header class="app-shell-header">
+  <div class="app-shell-header__inner">
+    <div class="app-shell-header__brand">
+      <div class="seal" aria-hidden="true">BSI</div>
+      <div>
+        <p class="eyebrow">Webmaster Portal</p>
+        <strong>Barangay San Isidro</strong>
+      </div>
+    </div>
+    <div class="app-shell-header__account">
+      <span class="role-badge">Webmaster</span>
+      <strong id="welcome-name"></strong>
+      <button id="logout-btn" class="btn btn--ghost" type="button">Log out</button>
+    </div>
+  </div>
+</header>
+
+<main class="portal-main">
+  <div id="webmaster-alert" class="page-alert" hidden></div>
+
+  <div class="portal-card">
+    <p class="eyebrow">Credential Governance</p>
+    <h2>Admin credentialing &amp; access</h2>
+    <p class="hint">Scope is credential governance only — Webmaster does not process resident requests or concerns.</p>
+    <div class="quick-actions">
+      <button id="refresh-btn" class="btn btn--green" type="button">Refresh</button>
+    </div>
+  </div>
+
+  <div class="portal-grid-3">
+    <div class="portal-metric"><span>Pending Applications</span><strong id="metric-pending">—</strong></div>
+    <div class="portal-metric"><span>Active Admins</span><strong id="metric-active-admins">—</strong></div>
+    <div class="portal-metric"><span>Suspended Admins</span><strong id="metric-suspended-admins">—</strong></div>
+  </div>
+
+  <section class="portal-card">
+    <h2>Credential Requests</h2>
+    <p class="hint">Pending Admin applications awaiting review.</p>
+    <div id="applications-loading" class="hint">Loading…</div>
+    <table class="data-table">
+      <thead><tr><th>Applicant</th><th>Email</th><th>Status</th><th>Applied</th><th>Review note</th><th></th></tr></thead>
+      <tbody id="applications-body"></tbody>
+    </table>
+  </section>
+
+  <section class="portal-card">
+    <h2>Administrators</h2>
+    <p class="hint">All approved Admin accounts and their current access.</p>
+    <div id="admins-loading" class="hint">Loading…</div>
+    <table class="data-table">
+      <thead><tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
+      <tbody id="admins-body"></tbody>
+    </table>
+  </section>
+
+  <section class="portal-card">
+    <h2>Credential History</h2>
+    <p class="hint">Every approve, reject, suspend, and reactivate action, attributed to the Webmaster who performed it.</p>
+    <div id="history-loading" class="hint">Loading…</div>
+    <table class="data-table">
+      <thead><tr><th>Action</th><th>Subject</th><th>Performed by</th><th>Note</th><th>When</th></tr></thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer class="hall-footer"><p>Digital Barangay App — webmaster portal</p></footer>
+
+<script src="webmaster-portal.js"></script>
+</body>
+</html>
