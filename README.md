@@ -1,8 +1,10 @@
 # Digital Barangay App — Frontend
 
-A full-stack Digital Barangay resident and staff portal for Barangay San Isidro.
+A full-stack Digital Barangay resident, administrator, and credential-governance portal for Barangay San Isidro.
 
-## Live Demo
+## Current release
+
+**v1.1.0 — live in production**
 
 **GitHub Pages:** https://arjayb.github.io/Digital-Barangay-App/
 
@@ -16,34 +18,45 @@ A full-stack Digital Barangay resident and staff portal for Barangay San Isidro.
 - Sign in securely with JWT authentication
 - Submit barangay document requests
 - Receive a backend-generated tracking number
+- Track request decision history and rejection notes
+- Confirm a document as claimed after it is marked ready for pickup
 - Report non-emergency community concerns
-- Track request and concern status
+- Track concern history and confirm a resolved concern as closed
 - View barangay officials and published notices
 
-### Barangay Staff
+### Barangay Administrators
 
-- Protected admin login
+- Protected staff login with stable `ADM-####` Staff IDs
 - Live resident/request/concern metrics
-- Review document requests
-- Update request status and add notes
-- Review community concerns
-- Update concern status
+- Review document requests through backend-authoritative status transitions
+- Add decision notes; rejection reasons are required when rejecting a request
+- Review community concerns through the approved response workflow
+- Preserve auditable status history attributed to the acting administrator
+
+### Webmaster
+
+- Dedicated `WEB-0001` credential-governance role and portal
+- Review pending administrator credential applications
+- Approve or reject applications with review notes
+- View administrators and their Staff IDs/account status
+- Suspend and reactivate administrator access without deleting historical attribution
+- Review credential-governance history
 
 ## Architecture
 
 ```text
-Resident / Admin Browser
-          |
-          v
-   GitHub Pages frontend
-          |
-          v
-   Render Express API
-          |
-       Prisma ORM
-          |
-          v
-      Neon PostgreSQL
+Resident / Admin / Webmaster Browser
+                |
+                v
+         GitHub Pages frontend
+                |
+                v
+         Render Express API
+                |
+             Prisma ORM
+                |
+                v
+          Neon PostgreSQL
 
 File uploads -> Cloudinary
 ```
@@ -64,26 +77,34 @@ File uploads -> Cloudinary
 
 | Page | Purpose |
 |---|---|
-| `index.html` | Public Digital Barangay front desk |
+| `index.html` | Single authentication gateway for resident and staff access |
 | `about.html` | About the application and architecture |
 | `member-register.html` | Resident account registration |
-| `member-login.html` | Resident authentication |
-| `member-dashboard.html` | Resident requests and concerns dashboard |
-| `admin-login.html` | Staff-only authentication |
-| `admin-dashboard.html` | Protected staff operations dashboard |
+| `member-dashboard.html` | Resident requests, concerns, tracking and confirmations |
+| `admin-dashboard.html` | Protected barangay operations dashboard |
+| `webmaster-dashboard.html` | Protected credential-governance dashboard |
 
-## Authentication
+## Authentication and governance
 
-The backend uses one login system with account roles (`resident` and `admin`). The frontend enforces the appropriate portal for each role, while protected pages re-check the session against the backend.
+The backend uses one authentication system with three roles: `resident`, `admin`, and `webmaster`. The frontend routes each authenticated user to the appropriate portal, while protected pages re-check the session against the backend.
+
+Operational authority and credential authority are intentionally separated: ordinary administrators process requests and concerns; the Webmaster governs administrator credentials and account lifecycle.
+
+## Release history
+
+- `v1.0.0` — first accepted full-stack production baseline
+- `v1.1.0` — Staff IDs, tracking numbers, auditable histories, resident completion/closure confirmations, backend-authoritative workflows, and Webmaster credential governance
+
+See [`CHANGELOG.md`](CHANGELOG.md) for release details.
 
 ## Development notes
 
-The public front desk is now connected to the deployed API. Requests and concerns are persisted in PostgreSQL rather than browser-only demo storage. Resident and admin dashboards consume live backend data.
+The public frontend consumes the live Render API; application records persist in Neon PostgreSQL rather than browser-only demo storage.
 
-For backend setup, database deployment and environment variables, see the companion repository:
+For backend setup, data model and deployment details, see the companion repository:
 
 https://github.com/arjayb/digital-barangay-backend
 
 ## Project status
 
-Version 1 full-stack foundation is deployed and connected across GitHub Pages, Render, Prisma and Neon. The next phase is production hardening, UX refinement, richer admin operations, and additional resident services.
+**v1.1.0 is deployed and human-accepted in production.** A separate independent POLARIS audit is intentionally deferred and will be performed as a later assurance exercise rather than treated as a release blocker.
