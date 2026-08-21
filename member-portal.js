@@ -9,23 +9,230 @@
  * screen that shows them.
  */
 
-const REQUEST_STATUS_LABEL = { pending:'Pending', under_review:'Under review', approved:'Approved', rejected:'Rejected', ready_for_pickup:'Ready for pickup', completed:'Completed' };
-const CONCERN_STATUS_LABEL = { open:'Open', in_progress:'In progress', resolved:'Resolved' };
-let requestsCache = [], concernsCache = [];
-function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function fmtDate(value){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}
-function fmtDateTime(value){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('en-PH');}
-function badge(status,labelMap){const key=String(status||'').toLowerCase();return `<span class="badge badge--${esc(key)}">${esc(labelMap[key]||status||'Pending')}</span>`;}
-function showPageAlert(message,tone){const box=document.getElementById('portal-alert');box.textContent=message;box.className=`page-alert page-alert--${tone}`;box.hidden=false;clearTimeout(showPageAlert._t);showPageAlert._t=setTimeout(()=>{box.hidden=true;},4500);}
-function goToTab(tabId){document.querySelectorAll('.portal-nav__item').forEach(item=>{const active=item.dataset.tab===tabId;item.classList.toggle('portal-nav__item--active',active);item.setAttribute('aria-selected',active?'true':'false');});document.querySelectorAll('.portal-panel').forEach(panel=>{panel.hidden=panel.id!==`panel-${tabId}`;});history.replaceState(null,'',`#${tabId}`);}
-function initNav(){document.querySelectorAll('.portal-nav__item').forEach(item=>item.addEventListener('click',()=>goToTab(item.dataset.tab)));document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goToTab(el.dataset.goto)));const initial=location.hash.replace('#','');goToTab(initial||'dashboard');}
-async function loadRequestsAndConcerns(){const [requestsData,concernsData]=await Promise.all([getMyRequests(),getMyConcerns()]);requestsCache=requestsData?.requests||[];concernsCache=concernsData?.concerns||[];renderDashboard();renderRequestsTable();renderConcernsTable();}
-function renderDashboard(){const activeRequests=requestsCache.filter(r=>!['completed','rejected'].includes(r.status));const openConcerns=concernsCache.filter(c=>c.status!=='resolved');document.getElementById('metric-requests').textContent=requestsCache.length;document.getElementById('metric-active-requests').textContent=activeRequests.length;document.getElementById('metric-open-concerns').textContent=openConcerns.length;const attention=[...activeRequests.slice(0,3).map(r=>({label:`${r.documentType} — ${REQUEST_STATUS_LABEL[r.status]||r.status}`,meta:`Filed ${fmtDate(r.createdAt)} · ${r.trackingNumber||r.id}`,goto:'requests'})),...openConcerns.slice(0,3).map(c=>({label:`${c.category} — ${CONCERN_STATUS_LABEL[c.status]||c.status}`,meta:`Reported ${fmtDate(c.createdAt)} · ${c.location||'No location given'}`,goto:'concerns'}))].slice(0,4);const el=document.getElementById('attention-list');el.innerHTML=attention.length?attention.map(a=>`<div class="attention-item"><div><span class="attention-item__label">${esc(a.label)}</span><span class="attention-item__meta">${esc(a.meta)}</span></div><button type="button" class="btn btn--ghost" data-goto="${a.goto}">View</button></div>`).join(''):'<p class="hint">Nothing needs your attention right now — everything on file is closed out.</p>';el.querySelectorAll('[data-goto]').forEach(x=>x.addEventListener('click',()=>goToTab(x.dataset.goto)));}
-function renderRequestsTable(){const body=document.getElementById('requests-body');body.innerHTML=requestsCache.length?requestsCache.map(r=>`<tr><td><strong>${esc(r.documentType)}</strong></td><td>${esc(r.purpose)}</td><td>${fmtDateTime(r.createdAt)}</td><td>${badge(r.status,REQUEST_STATUS_LABEL)}</td><td>${esc(r.trackingNumber||r.id||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="empty-row">You have not submitted any document requests yet.</td></tr>';}
-function renderConcernsTable(){const body=document.getElementById('concerns-body');body.innerHTML=concernsCache.length?concernsCache.map(c=>`<tr><td>${esc(c.category)}</td><td>${esc(c.location||'—')}</td><td>${esc(c.description)}</td><td>${fmtDateTime(c.createdAt)}</td><td>${badge(c.status,CONCERN_STATUS_LABEL)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty-row">You have not reported any concerns yet.</td></tr>';}
-async function refreshAll(){try{await loadRequestsAndConcerns();}catch(err){if(err.status===401){clearSession();location.replace('index.html?expired=1');return;}showPageAlert(err.message,'error');}}
-async function renderOfficials(){const target=document.getElementById('officials-grid');try{const data=await getOfficials(), officials=data?.officials||[];target.innerHTML=officials.length?officials.map(o=>`<article class="id-card"><div class="id-card__role">${esc(o.position||o.title||o.role||'')}</div><div class="id-card__name">${esc(o.name||o.fullName||'')}</div><div class="id-card__contact">${esc(o.contactNumber||o.contact||'')}</div></article>`).join(''):'<p class="hint">No officials have been published yet.</p>';}catch{target.innerHTML='<p class="hint">The directory is temporarily unavailable.</p>';}}
-async function renderNotices(){const target=document.getElementById('notices-board');try{const data=await getNotices(),notices=data?.notices||[];target.innerHTML=notices.length?notices.map((n,i)=>`<article class="notice notice--${i%3===0?'green':i%3===1?'orange':'gold'}"><div class="notice__title">${esc(n.title)}</div><div class="notice__body">${esc(n.body||n.content||'')}</div><span class="notice__date">Posted ${fmtDate(n.publishedAt||n.createdAt)}</span></article>`).join(''):'<p class="hint">No notices have been published yet.</p>';}catch{target.innerHTML='<p class="hint">The notice board is temporarily unavailable.</p>';}}
-function renderStub(request){document.getElementById('stub-placeholder').hidden=true;document.getElementById('stub-output').innerHTML=`<div class="stub"><div class="stub__eyebrow">Claim stub</div><div class="stub__doc">${esc(request.documentType)}</div><div class="stub__row"><span>Purpose</span><span>${esc(request.purpose)}</span></div><div class="stub__row"><span>Tracking No.</span><span class="stub__tracking">${esc(request.trackingNumber||request.id)}</span></div><div class="stub__row"><span>Date filed</span><span>${fmtDate(request.createdAt)}</span></div></div><p class="hint">Keep your tracking number — present it at the window when you claim your document.</p>`;}
-function initForms(){document.getElementById('request-form').addEventListener('submit',async event=>{event.preventDefault();const button=event.target.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Submitting…';try{const response=await createRequest({documentType:document.getElementById('doc-type').value,purpose:document.getElementById('doc-purpose').value.trim()});renderStub(response?.request||response);await refreshAll();event.target.reset();}catch(err){showPageAlert(err.message||'Unable to submit your request.','error');}finally{button.disabled=false;button.textContent='Submit request';}});document.getElementById('report-form').addEventListener('submit',async event=>{event.preventDefault();const button=event.target.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Submitting…';try{await createConcern({category:document.getElementById('report-type').value,location:document.getElementById('report-location').value.trim(),description:document.getElementById('report-desc').value.trim()});showPageAlert('Concern reported. You can track it under My Concerns.','ok');await refreshAll();event.target.reset();}catch(err){showPageAlert(err.message||'Unable to submit your concern.','error');}finally{button.disabled=false;button.textContent='Submit report';}});}
-document.getElementById('refresh-btn').addEventListener('click',refreshAll);document.getElementById('logout-btn').addEventListener('click',()=>{clearSession();location.replace('index.html');});initNav();initForms();renderOfficials();renderNotices();document.addEventListener('member-auth-ready',e=>{const user=e.detail.user;document.getElementById('welcome-name').textContent=user.fullName;document.getElementById('resident-email').textContent=user.email;refreshAll();});
+const REQUEST_STATUS_LABEL = {
+  pending: 'Pending',
+  under_review: 'Under review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  ready_for_pickup: 'Ready for pickup',
+  completed: 'Completed',
+};
+const CONCERN_STATUS_LABEL = {
+  open: 'Open',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+};
+
+let requestsCache = [];
+let concernsCache = [];
+
+/* ---------------------------------------------------------------- utils */
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtDateTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('en-PH');
+}
+function badge(status, labelMap) {
+  const key = String(status || '').toLowerCase();
+  return `<span class="badge badge--${esc(key)}">${esc(labelMap[key] || status || 'Pending')}</span>`;
+}
+function showPageAlert(message, tone) {
+  const box = document.getElementById('portal-alert');
+  box.textContent = message;
+  box.className = `page-alert page-alert--${tone}`;
+  box.hidden = false;
+  clearTimeout(showPageAlert._t);
+  showPageAlert._t = setTimeout(() => { box.hidden = true; }, 4500);
+}
+
+/* ---------------------------------------------------------- tab routing */
+
+function goToTab(tabId) {
+  document.querySelectorAll('.portal-nav__item').forEach((item) => {
+    const active = item.dataset.tab === tabId;
+    item.classList.toggle('portal-nav__item--active', active);
+    item.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.portal-panel').forEach((panel) => {
+    panel.hidden = panel.id !== `panel-${tabId}`;
+  });
+  history.replaceState(null, '', `#${tabId}`);
+}
+
+function initNav() {
+  document.querySelectorAll('.portal-nav__item').forEach((item) => {
+    item.addEventListener('click', () => goToTab(item.dataset.tab));
+  });
+  document.querySelectorAll('[data-goto]').forEach((el) => {
+    el.addEventListener('click', () => goToTab(el.dataset.goto));
+  });
+  const initial = location.hash.replace('#', '');
+  goToTab(initial || 'dashboard');
+}
+
+/* ------------------------------------------------------------ data load */
+
+async function loadRequestsAndConcerns() {
+  const [requestsData, concernsData] = await Promise.all([getMyRequests(), getMyConcerns()]);
+  requestsCache = requestsData?.requests || [];
+  concernsCache = concernsData?.concerns || [];
+  renderDashboard();
+  renderRequestsTable();
+  renderConcernsTable();
+}
+
+function renderDashboard() {
+  const activeRequests = requestsCache.filter((r) => !['completed', 'rejected'].includes(r.status));
+  const openConcerns = concernsCache.filter((c) => c.status !== 'resolved');
+
+  document.getElementById('metric-requests').textContent = requestsCache.length;
+  document.getElementById('metric-active-requests').textContent = activeRequests.length;
+  document.getElementById('metric-open-concerns').textContent = openConcerns.length;
+
+  const attention = [
+    ...activeRequests.slice(0, 3).map((r) => ({
+      label: `${r.documentType} — ${REQUEST_STATUS_LABEL[r.status] || r.status}`,
+      meta: `Filed ${fmtDate(r.createdAt)} · ${r.trackingNumber || r.id}`,
+      goto: 'requests',
+    })),
+    ...openConcerns.slice(0, 3).map((c) => ({
+      label: `${c.category} — ${CONCERN_STATUS_LABEL[c.status] || c.status}`,
+      meta: `Reported ${fmtDate(c.createdAt)} · ${c.location || 'No location given'}`,
+      goto: 'concerns',
+    })),
+  ].slice(0, 4);
+
+  const attentionEl = document.getElementById('attention-list');
+  attentionEl.innerHTML = attention.length
+    ? attention.map((a) => `<div class="attention-item"><div><span class="attention-item__label">${esc(a.label)}</span><span class="attention-item__meta">${esc(a.meta)}</span></div><button type="button" class="btn btn--ghost" data-goto="${a.goto}">View</button></div>`).join('')
+    : '<p class="hint">Nothing needs your attention right now — everything on file is closed out.</p>';
+  attentionEl.querySelectorAll('[data-goto]').forEach((el) => el.addEventListener('click', () => goToTab(el.dataset.goto)));
+}
+
+function renderRequestsTable() {
+  const body = document.getElementById('requests-body');
+  body.innerHTML = requestsCache.length
+    ? requestsCache.map((r) => `<tr><td><strong>${esc(r.documentType)}</strong></td><td>${esc(r.purpose)}</td><td>${fmtDateTime(r.createdAt)}</td><td>${badge(r.status, REQUEST_STATUS_LABEL)}</td><td>${esc(r.trackingNumber || r.id || '—')}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty-row">You have not submitted any document requests yet.</td></tr>';
+}
+
+function renderConcernsTable() {
+  const body = document.getElementById('concerns-body');
+  body.innerHTML = concernsCache.length
+    ? concernsCache.map((c) => `<tr><td>${esc(c.category)}</td><td>${esc(c.location || '—')}</td><td>${esc(c.description)}</td><td>${fmtDateTime(c.createdAt)}</td><td>${badge(c.status, CONCERN_STATUS_LABEL)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty-row">You have not reported any concerns yet.</td></tr>';
+}
+
+async function refreshAll() {
+  try {
+    await loadRequestsAndConcerns();
+  } catch (err) {
+    if (err.status === 401) { clearSession(); location.replace('index.html?expired=1'); return; }
+    showPageAlert(err.message, 'error');
+  }
+}
+
+/* ----------------------------------------------------------- directory */
+
+async function renderOfficials() {
+  const target = document.getElementById('officials-grid');
+  try {
+    const data = await getOfficials();
+    const officials = data?.officials || [];
+    target.innerHTML = officials.length
+      ? officials.map((o) => `<article class="id-card"><div class="id-card__role">${esc(o.position || o.title || o.role || '')}</div><div class="id-card__name">${esc(o.name || o.fullName || '')}</div><div class="id-card__contact">${esc(o.contactNumber || o.contact || '')}</div></article>`).join('')
+      : '<p class="hint">No officials have been published yet.</p>';
+  } catch {
+    target.innerHTML = '<p class="hint">The directory is temporarily unavailable.</p>';
+  }
+}
+
+async function renderNotices() {
+  const target = document.getElementById('notices-board');
+  try {
+    const data = await getNotices();
+    const notices = data?.notices || [];
+    target.innerHTML = notices.length
+      ? notices.map((n, i) => `<article class="notice notice--${i % 3 === 0 ? 'green' : i % 3 === 1 ? 'orange' : 'gold'}"><div class="notice__title">${esc(n.title)}</div><div class="notice__body">${esc(n.body || n.content || '')}</div><span class="notice__date">Posted ${fmtDate(n.publishedAt || n.createdAt)}</span></article>`).join('')
+      : '<p class="hint">No notices have been published yet.</p>';
+  } catch {
+    target.innerHTML = '<p class="hint">The notice board is temporarily unavailable.</p>';
+  }
+}
+
+/* ---------------------------------------------------------------- forms */
+
+function renderStub(request) {
+  document.getElementById('stub-placeholder').hidden = true;
+  document.getElementById('stub-output').innerHTML = `<div class="stub"><div class="stub__eyebrow">Claim stub</div><div class="stub__doc">${esc(request.documentType)}</div><div class="stub__row"><span>Purpose</span><span>${esc(request.purpose)}</span></div><div class="stub__row"><span>Tracking No.</span><span class="stub__tracking">${esc(request.trackingNumber || request.id)}</span></div><div class="stub__row"><span>Date filed</span><span>${fmtDate(request.createdAt)}</span></div></div><p class="hint">Keep your tracking number — present it at the window when you claim your document.</p>`;
+}
+
+function initForms() {
+  document.getElementById('request-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Submitting…';
+    try {
+      const response = await createRequest({
+        documentType: document.getElementById('doc-type').value,
+        purpose: document.getElementById('doc-purpose').value.trim(),
+      });
+      renderStub(response?.request || response);
+      await refreshAll();
+      event.target.reset();
+    } catch (err) {
+      showPageAlert(err.message || 'Unable to submit your request.', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Submit request';
+    }
+  });
+
+  document.getElementById('report-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Submitting…';
+    try {
+      await createConcern({
+        category: document.getElementById('report-type').value,
+        location: document.getElementById('report-location').value.trim(),
+        description: document.getElementById('report-desc').value.trim(),
+      });
+      showPageAlert('Concern reported. You can track it under My Concerns.', 'ok');
+      await refreshAll();
+      event.target.reset();
+    } catch (err) {
+      showPageAlert(err.message || 'Unable to submit your concern.', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Submit report';
+    }
+  });
+}
+
+/* --------------------------------------------------------------- init */
+
+document.getElementById('logout-btn').addEventListener('click', () => { clearSession(); location.replace('index.html'); });
+
+initNav();
+initForms();
+renderOfficials();
+renderNotices();
+
+document.addEventListener('member-auth-ready', (e) => {
+  const user = e.detail.user;
+  document.getElementById('welcome-name').textContent = user.fullName;
+  document.getElementById('resident-email').textContent = user.email;
+  refreshAll();
+});
