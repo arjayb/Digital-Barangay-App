@@ -1,107 +1,96 @@
-// gateway.js — single authentication entry point for resident and staff roles
+/**
+ * gateway.js — drives index.html, the single authentication gateway.
+ *
+ * The Member/Admin toggle is only an interface mode selector: it decides
+ * which heading/hint is shown and which role a successful login is
+ * expected to match. It does not grant access on its own — actual
+ * authorization still comes entirely from the backend's login response
+ * and role validation (see authorize() calls the API already performs).
+ */
 (function () {
-  'use strict';
-
-  const params = new URLSearchParams(location.search);
-  const requestedMode = params.get('mode') === 'admin' ? 'admin' : 'member';
-  const next = params.get('next');
+  // Same-app pages a `next` value is allowed to point at. Anything else
+  // (a different host, a path outside this list, an absolute/protocol-
+  // relative URL) is ignored — see routeForRole().
   const ALLOWED_DESTINATIONS = ['member-dashboard.html', 'admin-dashboard.html'];
 
-  let mode = requestedMode;
+  const params = new URLSearchParams(location.search);
+  const next = params.get('next');
+  let mode = params.get('mode') === 'admin' ? 'admin' : 'member';
 
-  const form = document.getElementById('login-form');
-  const heading = document.getElementById('login-heading');
-  const context = document.getElementById('login-context');
-  const submit = document.getElementById('login-submit');
-  const switchBtn = document.getElementById('mode-switch');
-  const registerRow = document.getElementById('register-row');
-  const errorBox = document.getElementById('login-error');
-  const emailInput = document.getElementById('login-email');
-  const passwordInput = document.getElementById('login-password');
+  const form = document.getElementById('gateway-form');
+  const heading = document.getElementById('gateway-heading');
+  const hint = document.getElementById('gateway-hint');
+  const emailInput = document.getElementById('gateway-email');
+  const passwordInput = document.getElementById('gateway-password');
+  const errorBox = document.getElementById('gateway-error');
+  const submitBtn = document.getElementById('gateway-submit');
+  const switchBtn = document.getElementById('gateway-switch');
+  const registerRow = document.getElementById('gateway-register-row');
+
+  const existing = getSession();
+  if (
+    existing?.token && existing?.user &&
+    ((mode === 'admin' && existing.user.role === 'admin') ||
+      (mode === 'member' && existing.user.role === 'resident'))
+  ) {
+    routeForRole(existing.user.role, next);
+    return;
+  }
+
+  applyMode(mode, { skipHistory: true });
+  switchBtn.addEventListener('click', () => { applyMode(mode === 'member' ? 'admin' : 'member'); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    setLoading(true);
+    try {
+      const { token, user } = await login(email, password);
+      if (mode === 'admin' && user.role !== 'admin') {
+        showError('This account does not have staff access.');
+        return;
+      }
+      if (mode === 'member' && user.role !== 'resident') {
+        showError('This account is for barangay staff. Please use Admin Login.');
+        return;
+      }
+      setSession(token, user);
+      routeForRole(user.role, next);
+    } catch (err) {
+      showError(err.status === 401 ? 'Incorrect email or password.' : err.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function applyMode(nextMode, opts = {}) {
+    mode = nextMode;
+    const isAdmin = mode === 'admin';
+    heading.textContent = isAdmin ? 'Admin sign in' : 'Resident sign in';
+    hint.textContent = isAdmin
+      ? 'This login is for barangay staff only. Residents should use the resident sign-in instead.'
+      : "Use the account you registered with the barangay front desk.";
+    switchBtn.textContent = isAdmin ? 'Member Login' : 'Admin Login';
+    registerRow.hidden = isAdmin;
+    passwordInput.value = '';
+    hideError();
+    if (!opts.skipHistory) {
+      const url = new URL(location.href);
+      if (isAdmin) url.searchParams.set('mode', 'admin');
+      else url.searchParams.delete('mode');
+      history.replaceState(null, '', url);
+    }
+    emailInput.focus();
+  }
 
   function routeForRole(role, nextParam) {
     const dest = role === 'admin' ? 'admin-dashboard.html' : 'member-dashboard.html';
     const safeNext = ALLOWED_DESTINATIONS.includes(nextParam) && nextParam === dest ? nextParam : null;
     location.replace(safeNext || dest);
   }
-
-  function setMode(nextMode) {
-    mode = nextMode;
-    const isAdmin = mode === 'admin';
-    heading.textContent = isAdmin ? 'Admin Login' : 'Member Login';
-    context.textContent = isAdmin
-      ? 'Barangay staff access only.'
-      : 'Sign in to access barangay services.';
-    submit.textContent = isAdmin ? 'Sign in as Admin' : 'Sign in';
-    switchBtn.textContent = isAdmin ? 'Member Login' : 'Admin Login';
-    switchBtn.setAttribute('aria-label', isAdmin ? 'Switch to member login' : 'Switch to admin login');
-    registerRow.hidden = isAdmin;
-    errorBox.hidden = true;
-    errorBox.textContent = '';
-
-    const url = new URL(location.href);
-    if (isAdmin) url.searchParams.set('mode', 'admin');
-    else url.searchParams.delete('mode');
-    history.replaceState(null, '', url);
-  }
-
-  function showError(message) {
-    errorBox.textContent = message;
-    errorBox.hidden = false;
-  }
-
-  switchBtn.addEventListener('click', () => {
-    setMode(mode === 'admin' ? 'member' : 'admin');
-    emailInput.focus();
-  });
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    errorBox.hidden = true;
-    submit.disabled = true;
-    const original = submit.textContent;
-    submit.textContent = 'Signing in…';
-
-    try {
-      const result = await loginUser(emailInput.value.trim(), passwordInput.value);
-      const token = result.token;
-      const user = result.user;
-
-      if (!token || !user) throw new Error('Login response was incomplete.');
-
-      if (mode === 'admin' && user.role !== 'admin') {
-        showError('This account does not have staff access.');
-        return;
-      }
-
-      if (mode === 'member' && user.role !== 'resident') {
-        showError('This account is for barangay staff. Please use Admin Login.');
-        return;
-      }
-
-      setSession(token, user);
-      routeForRole(user.role, next);
-    } catch (err) {
-      showError(err.message || 'Unable to sign in.');
-    } finally {
-      submit.disabled = false;
-      submit.textContent = original;
-    }
-  });
-
-  // If already signed in, only skip the gateway when the cached role matches
-  // the mode the visitor is trying to enter. Guards will revalidate the token.
-  const existingToken = getToken();
-  const existingUser = getCurrentUser();
-  if (existingToken && existingUser) {
-    const matchesMode =
-      (mode === 'admin' && existingUser.role === 'admin') ||
-      (mode === 'member' && existingUser.role === 'resident');
-    if (matchesMode) {
-      routeForRole(existingUser.role, next);
-      return;
-    }
-  }
-
-  setMode(mode);
+  function showError(message) { errorBox.textContent = message; errorBox.hidden = false; }
+  function hideError() { errorBox.hidden = true; }
+  function setLoading(isLoading) { submitBtn.disabled = isLoading; submitBtn.textContent = isLoading ? 'Signing in…' : 'Sign in'; }
 })();
