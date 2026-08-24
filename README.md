@@ -107,4 +107,15 @@ https://github.com/arjayb/digital-barangay-backend
 
 ## Project status
 
-**v1.1.0 is deployed and human-accepted in production.** A separate independent POLARIS audit is intentionally deferred and will be performed as a later assurance exercise rather than treated as a release blocker.
+**v1.1.0 is deployed and human-accepted in production.** Additional independent assurance remains a future quality checkpoint and is not represented as part of this release.
+
+
+---
+
+## About KELBRIC Technologies
+
+We turn practical ideas and operational needs into focused digital products through rapid prototyping and evidence-based iteration.
+
+**Public product process:** DISCOVER → DESIGN → BUILD → PROVE
+
+© 2026 KELBRIC Technologies.
