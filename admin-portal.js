@@ -1,195 +1,26 @@
-/**
- * admin-portal.js — drives admin-dashboard.html.
- *
- * v1.1.0: the status dropdowns only ever offer the current status plus its
- * backend-approved next steps (mirrored from src/utils/stateMachine.js on
- * the server) — this is a UI convenience, not the actual authorization.
- * The backend re-validates every transition independently and will reject
- * anything this list doesn't also allow, so this frontend list can never
- * be the thing that grants a transition.
- */
+const REQUEST_TRANSITIONS={pending:['under_review'],under_review:['approved','rejected'],approved:['ready_for_pickup']};
+const CONCERN_TRANSITIONS={open:['in_progress'],in_progress:['resolved']};
+const REQUEST_STATUS_LABEL={pending:'Pending',under_review:'Under review',approved:'Approved',rejected:'Rejected',ready_for_pickup:'Ready for pickup',completed:'Completed'};
+const CONCERN_STATUS_LABEL={open:'Open',in_progress:'In progress',resolved:'Resolved',closed:'Closed'};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=v=>v?new Date(v).toLocaleString():'—';
+function showAlert(message,tone){const box=document.getElementById('admin-alert');box.textContent=message;box.className=`page-alert page-alert--${tone}`;box.hidden=false;clearTimeout(showAlert._t);showAlert._t=setTimeout(()=>{box.hidden=true;},4000);}
+function transitionOptions(current,transitions,labelMap){return[current,...(transitions[current]||[])].map(v=>`<option value="${esc(v)}">${esc(labelMap[v]||v)}</option>`).join('');}
+function historyDetails(history,labelMap){const entries=history||[];if(!entries.length)return'<span class="hint" style="margin:0">No history yet</span>';const rows=entries.map(h=>{const who=h.actorType==='system'?'System':`${h.actorType}${h.actorStaffId?` · ${esc(h.actorStaffId)}`:''}`;const from=h.fromStatus?(labelMap[h.fromStatus]||h.fromStatus):'created';const to=labelMap[h.toStatus]||h.toStatus;return`<div style="padding:6px 0;border-bottom:1px solid var(--line)"><strong>${esc(from)} → ${esc(to)}</strong><br><span class="hint" style="margin:0">${esc(who)} · ${fmt(h.createdAt)}</span>${h.note?`<br><span class="hint" style="margin:0">“${esc(h.note)}”</span>`:''}</div>`;}).join('');return`<details><summary>View History · ${entries.length}</summary><div style="margin-top:8px;max-width:300px">${rows}</div></details>`;}
+async function loadDashboard(){try{document.getElementById('requests-loading').hidden=false;document.getElementById('concerns-loading').hidden=false;const[summary,requests,concerns]=await Promise.all([getAdminSummary(),getAdminRequests(),getAdminConcerns()]);const s=summary.summary||{},req=s.requestsByStatus||[],con=s.concernsByStatus||[];document.getElementById('metric-users').textContent=s.totalUsers??0;document.getElementById('metric-requests').textContent=req.reduce((a,x)=>a+x.count,0);document.getElementById('metric-pending').textContent=req.find(x=>x._id==='pending')?.count||0;document.getElementById('metric-concerns').textContent=con.filter(x=>!['resolved','closed'].includes(x._id)).reduce((a,x)=>a+x.count,0);renderRequests(requests.requests||[]);renderConcerns(concerns.concerns||[]);}catch(e){if(e.status===401||e.status===403)clearSession();showAlert(e.message,'error');}finally{document.getElementById('requests-loading').hidden=true;document.getElementById('concerns-loading').hidden=true;}}
+function renderRequests(rows){document.getElementById('requests-body').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.requestor?.fullName||'Unknown')}<br><span class="hint" style="margin:0">${esc(r.requestor?.email||'')}</span></td><td>${esc(r.documentType)}</td><td>${esc(r.purpose)}</td><td>${fmt(r.createdAt)}</td><td><select class="status-control" data-request-status="${esc(r.id)}" data-current="${esc(r.status)}">${transitionOptions(r.status,REQUEST_TRANSITIONS,REQUEST_STATUS_LABEL)}</select></td><td><input class="status-note" data-request-note="${esc(r.id)}" placeholder="Note (required if rejecting)"></td><td>${historyDetails(r.history,REQUEST_STATUS_LABEL)}</td><td><button type="button" class="btn btn--green" data-save-request="${esc(r.id)}">Save</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty-row">No document requests yet.</td></tr>';}
+function renderConcerns(rows){document.getElementById('concerns-body').innerHTML=rows.length?rows.map(c=>`<tr><td>${esc(c.reporter?.fullName||'Unknown')}<br><span class="hint" style="margin:0">${esc(c.reporter?.email||'')}</span></td><td>${esc(c.category)}</td><td>${esc(c.location)}</td><td>${esc(c.description)}</td><td>${fmt(c.createdAt)}</td><td><select class="status-control" data-concern-status="${esc(c.id)}" data-current="${esc(c.status)}">${transitionOptions(c.status,CONCERN_TRANSITIONS,CONCERN_STATUS_LABEL)}</select></td><td>${historyDetails(c.history,CONCERN_STATUS_LABEL)}</td><td><button type="button" class="btn btn--green" data-save-concern="${esc(c.id)}">Save</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty-row">No concerns yet.</td></tr>';}
+async function loadUsers(){try{const data=await getAdminUsers();const rows=data?.users||data?.results||(Array.isArray(data)?data:[]);document.getElementById('users-body').innerHTML=rows.length?rows.map(u=>`<tr><td>${esc(u.fullName||u.name||'—')}</td><td>${esc(u.email||'—')}</td><td>${esc(u.role||'—')}</td><td>${fmt(u.createdAt)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty-row">No residents on file yet.</td></tr>';}catch{document.getElementById('users-error').hidden=false;}finally{document.getElementById('users-loading').hidden=true;}}
 
-// Mirrors src/utils/stateMachine.js — kept here only so the dropdown can
-// hide obviously-invalid options. Source of truth stays on the server.
-const REQUEST_TRANSITIONS = {
-  pending: ['under_review'],
-  under_review: ['approved', 'rejected'],
-  approved: ['ready_for_pickup'],
-};
-const CONCERN_TRANSITIONS = {
-  open: ['in_progress'],
-  in_progress: ['resolved'],
-};
+const activityState={period:'today',start:null,end:null,actorUserId:'',module:'',action:''};
+function dayStart(d){const x=new Date(d);x.setHours(0,0,0,0);return x;}function dayEnd(d){const x=new Date(d);x.setHours(23,59,59,999);return x;}
+function periodBounds(period){const now=new Date();if(period==='today')return[dayStart(now),dayEnd(now)];if(period==='week'){const s=dayStart(now),dow=(s.getDay()+6)%7;s.setDate(s.getDate()-dow);const e=dayEnd(s);e.setDate(e.getDate()+6);return[s,e];}if(period==='month')return[new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0),new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999)];return[activityState.start,activityState.end];}
+function fillSelect(id,items,valueOf,labelOf){const el=document.getElementById(id),current=el.value,first=el.options[0].outerHTML;el.innerHTML=first+items.map(x=>`<option value="${esc(valueOf(x))}">${esc(labelOf(x))}</option>`).join('');el.value=[...el.options].some(o=>o.value===current)?current:'';}
+async function loadActivity(){const[start,end]=periodBounds(activityState.period);if(!start||!end)return;document.getElementById('activity-loading').hidden=false;try{const data=await getAdminActivity({start:start.toISOString(),end:end.toISOString(),actorUserId:activityState.actorUserId,module:activityState.module,action:activityState.action});fillSelect('activity-admin',data.filters?.admins||[],x=>x.id,x=>`${x.fullName}${x.staffId?` · ${x.staffId}`:''}`);fillSelect('activity-module',data.filters?.modules||[],x=>x,x=>x.replaceAll('_',' '));fillSelect('activity-action',data.filters?.actions||[],x=>x,x=>x.replaceAll('_',' '));const list=document.getElementById('activity-list');list.innerHTML=(data.events||[]).length?data.events.map(e=>`<article class="activity-entry"><div><strong>${esc(e.actorName)}</strong> <span class="hint">${e.actorStaffId?`· ${esc(e.actorStaffId)} `:''}· ${fmt(e.createdAt)}</span></div><div>${esc(e.action.replaceAll('_',' '))} · <strong>${esc(e.module)}</strong>${e.recordLabel?` · ${esc(e.recordLabel)}`:''}</div>${e.note?`<div class="hint">${esc(e.note)}</div>`:''}<button type="button" class="btn btn--ghost" data-record-history="${esc(e.module)}" data-record-id="${esc(e.recordId)}">View History</button><div data-history-target="${esc(e.module)}:${esc(e.recordId)}"></div></article>`).join(''):'<p class="hint">No activity in this period.</p>';}catch(e){showAlert(e.message,'error');}finally{document.getElementById('activity-loading').hidden=true;}}
 
-const REQUEST_STATUS_LABEL = {
-  pending: 'Pending', under_review: 'Under review', approved: 'Approved',
-  rejected: 'Rejected', ready_for_pickup: 'Ready for pickup', completed: 'Completed',
-};
-const CONCERN_STATUS_LABEL = {
-  open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed',
-};
-
-const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (v) => (v ? new Date(v).toLocaleString() : '—');
-
-function showAlert(message, tone) {
-  const box = document.getElementById('admin-alert');
-  box.textContent = message;
-  box.className = `page-alert page-alert--${tone}`;
-  box.hidden = false;
-  clearTimeout(showAlert._t);
-  showAlert._t = setTimeout(() => { box.hidden = true; }, 4000);
-}
-
-// Builds <option>s for "current status (unchanged)" + whatever the state
-// machine allows next. A status with no admin-side next step (completed,
-// ready_for_pickup, rejected, resolved) ends up with exactly one option —
-// itself — which is the honest way to say "no admin transition available".
-function transitionOptions(current, transitions, labelMap) {
-  const next = transitions[current] || [];
-  const values = [current, ...next];
-  return values.map((v) => `<option value="${esc(v)}">${esc(labelMap[v] || v)}</option>`).join('');
-}
-
-function historyDetails(history, labelMap) {
-  const entries = history || [];
-  if (!entries.length) return '<span class="hint" style="margin:0">No history yet</span>';
-  const rows = entries.map((h) => {
-    const who = h.actorType === 'system' ? 'System (v1.0.0 import)' : `${h.actorType}${h.actorStaffId ? ` · ${esc(h.actorStaffId)}` : ''}`;
-    const from = h.fromStatus ? (labelMap[h.fromStatus] || h.fromStatus) : 'created';
-    const to = labelMap[h.toStatus] || h.toStatus;
-    return `<div style="padding:6px 0;border-bottom:1px solid var(--line)">
-      <strong>${esc(from)} → ${esc(to)}</strong><br>
-      <span class="hint" style="margin:0">${esc(who)} · ${fmt(h.createdAt)}</span>
-      ${h.note ? `<br><span class="hint" style="margin:0">"${esc(h.note)}"</span>` : ''}
-    </div>`;
-  }).join('');
-  return `<details><summary>${entries.length} event${entries.length === 1 ? '' : 's'}</summary><div style="margin-top:8px;max-width:280px">${rows}</div></details>`;
-}
-
-async function loadDashboard() {
-  try {
-    document.getElementById('requests-loading').hidden = false;
-    document.getElementById('concerns-loading').hidden = false;
-    const [summary, requests, concerns] = await Promise.all([getAdminSummary(), getAdminRequests(), getAdminConcerns()]);
-    const s = summary.summary || {};
-    const req = s.requestsByStatus || [];
-    const con = s.concernsByStatus || [];
-    document.getElementById('metric-users').textContent = s.totalUsers ?? 0;
-    document.getElementById('metric-requests').textContent = req.reduce((a, x) => a + x.count, 0);
-    document.getElementById('metric-pending').textContent = req.find((x) => x._id === 'pending')?.count || 0;
-    document.getElementById('metric-concerns').textContent = con.filter((x) => x._id !== 'resolved').reduce((a, x) => a + x.count, 0);
-    renderRequests(requests.requests || []);
-    renderConcerns(concerns.concerns || []);
-  } catch (e) {
-    if (e.status === 401 || e.status === 403) clearSession();
-    showAlert(e.message, 'error');
-  } finally {
-    document.getElementById('requests-loading').hidden = true;
-    document.getElementById('concerns-loading').hidden = true;
-  }
-}
-
-function renderRequests(rows) {
-  document.getElementById('requests-body').innerHTML = rows.length
-    ? rows.map((r) => `
-      <tr>
-        <td>${esc(r.requestor?.fullName || 'Unknown')}<br><span class="hint" style="margin:0">${esc(r.requestor?.email || '')}</span></td>
-        <td>${esc(r.documentType)}</td>
-        <td>${esc(r.purpose)}</td>
-        <td>${fmt(r.createdAt)}</td>
-        <td><select class="status-control" data-request-status="${esc(r.id)}" data-current="${esc(r.status)}">${transitionOptions(r.status, REQUEST_TRANSITIONS, REQUEST_STATUS_LABEL)}</select></td>
-        <td><input class="status-note" data-request-note="${esc(r.id)}" placeholder="Note (required if rejecting)"></td>
-        <td>${historyDetails(r.history, REQUEST_STATUS_LABEL)}</td>
-        <td><button type="button" class="btn btn--green" data-save-request="${esc(r.id)}">Save</button></td>
-      </tr>`).join('')
-    : '<tr><td colspan="8" class="empty-row">No document requests yet.</td></tr>';
-}
-
-function renderConcerns(rows) {
-  document.getElementById('concerns-body').innerHTML = rows.length
-    ? rows.map((c) => `
-      <tr>
-        <td>${esc(c.reporter?.fullName || 'Unknown')}<br><span class="hint" style="margin:0">${esc(c.reporter?.email || '')}</span></td>
-        <td>${esc(c.category)}</td>
-        <td>${esc(c.location)}</td>
-        <td>${esc(c.description)}</td>
-        <td>${fmt(c.createdAt)}</td>
-        <td><select class="status-control" data-concern-status="${esc(c.id)}" data-current="${esc(c.status)}">${transitionOptions(c.status, CONCERN_TRANSITIONS, CONCERN_STATUS_LABEL)}</select></td>
-        <td>${historyDetails(c.history, CONCERN_STATUS_LABEL)}</td>
-        <td><button type="button" class="btn btn--green" data-save-concern="${esc(c.id)}">Save</button></td>
-      </tr>`).join('')
-    : '<tr><td colspan="7" class="empty-row">No concerns yet.</td></tr>';
-}
-
-async function loadUsers() {
-  try {
-    const data = await getAdminUsers();
-    const rows = data?.users || data?.results || (Array.isArray(data) ? data : []);
-    document.getElementById('users-body').innerHTML = rows.length
-      ? rows.map((u) => `<tr><td>${esc(u.fullName || u.name || '—')}</td><td>${esc(u.email || '—')}</td><td>${esc(u.role || '—')}</td><td>${fmt(u.createdAt)}</td></tr>`).join('')
-      : '<tr><td colspan="4" class="empty-row">No residents on file yet.</td></tr>';
-  } catch {
-    document.getElementById('users-error').hidden = false;
-  } finally {
-    document.getElementById('users-loading').hidden = true;
-  }
-}
-
-document.addEventListener('click', async (e) => {
-  const rb = e.target.closest('[data-save-request]');
-  const cb = e.target.closest('[data-save-concern]');
-  try {
-    if (rb) {
-      const id = rb.dataset.saveRequest;
-      const select = document.querySelector(`[data-request-status="${CSS.escape(id)}"]`);
-      const status = select.value;
-      const current = select.dataset.current;
-      const note = document.querySelector(`[data-request-note="${CSS.escape(id)}"]`).value.trim();
-
-      if (status === current) {
-        showAlert('Choose a next status before saving.', 'error');
-        return;
-      }
-      if (current === 'under_review' && status === 'rejected' && !note) {
-        showAlert('A reason is required when rejecting a request.', 'error');
-        return;
-      }
-
-      rb.disabled = true;
-      await updateRequestStatus(id, status, note);
-      showAlert('Request status updated.', 'ok');
-      await loadDashboard();
-    }
-    if (cb) {
-      const id = cb.dataset.saveConcern;
-      const select = document.querySelector(`[data-concern-status="${CSS.escape(id)}"]`);
-      const status = select.value;
-      const current = select.dataset.current;
-
-      if (status === current) {
-        showAlert('Choose a next status before saving.', 'error');
-        return;
-      }
-
-      cb.disabled = true;
-      await updateConcernStatus(id, status);
-      showAlert('Concern status updated.', 'ok');
-      await loadDashboard();
-    }
-  } catch (err) {
-    showAlert(err.message, 'error');
-    await loadDashboard();
-  }
-});
-
-document.getElementById('refresh-btn').addEventListener('click', () => { loadDashboard(); loadUsers(); });
-document.getElementById('logout-btn').addEventListener('click', () => { clearSession(); location.replace('index.html?mode=admin'); });
-document.addEventListener('admin-auth-ready', (e) => {
-  const user = e.detail.user;
-  document.getElementById('welcome-name').textContent = user.fullName;
-  document.getElementById('welcome-staffid').textContent = user.staffId || '—';
-  document.getElementById('welcome-staffid-inline').textContent = user.staffId || '—';
-  loadDashboard();
-  loadUsers();
-});
+document.addEventListener('click',async e=>{const rb=e.target.closest('[data-save-request]'),cb=e.target.closest('[data-save-concern]'),pb=e.target.closest('[data-period]'),hb=e.target.closest('[data-record-history]');try{if(rb){const id=rb.dataset.saveRequest,select=document.querySelector(`[data-request-status="${CSS.escape(id)}"]`),status=select.value,current=select.dataset.current,note=document.querySelector(`[data-request-note="${CSS.escape(id)}"]`).value.trim();if(status===current)return showAlert('Choose a next status before saving.','error');if(current==='under_review'&&status==='rejected'&&!note)return showAlert('A reason is required when rejecting a request.','error');rb.disabled=true;await updateRequestStatus(id,status,note);showAlert('Request status updated and recorded in Activity.','ok');await Promise.all([loadDashboard(),loadActivity()]);}if(cb){const id=cb.dataset.saveConcern,select=document.querySelector(`[data-concern-status="${CSS.escape(id)}"]`),status=select.value,current=select.dataset.current;if(status===current)return showAlert('Choose a next status before saving.','error');cb.disabled=true;await updateConcernStatus(id,status);showAlert('Concern status updated and recorded in Activity.','ok');await Promise.all([loadDashboard(),loadActivity()]);}if(pb){activityState.period=pb.dataset.period;document.querySelectorAll('[data-period]').forEach(b=>{b.classList.toggle('btn--green',b===pb);b.classList.toggle('btn--ghost',b!==pb);});document.getElementById('custom-range').hidden=activityState.period!=='custom';if(activityState.period!=='custom')await loadActivity();}if(hb){const data=await getAdminRecordHistory(hb.dataset.recordHistory,hb.dataset.recordId);const target=document.querySelector(`[data-history-target="${CSS.escape(hb.dataset.recordHistory+':'+hb.dataset.recordId)}"]`);target.innerHTML=(data.events||[]).map(x=>`<div class="history-line"><strong>${esc(x.actorName)}</strong> · ${esc(x.action.replaceAll('_',' '))}<br><span class="hint">${fmt(x.createdAt)}</span></div>`).join('')||'<p class="hint">No shared history yet.</p>';}}catch(err){showAlert(err.message,'error');await loadDashboard();}});
+['activity-admin','activity-module','activity-action'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{activityState[id.replace('activity-','')==='admin'?'actorUserId':id.replace('activity-','')]=e.target.value;loadActivity();}));
+document.getElementById('apply-range').addEventListener('click',()=>{const s=document.getElementById('activity-start').value,e=document.getElementById('activity-end').value;if(!s||!e)return showAlert('Choose both start and end dates.','error');const start=new Date(`${s}T00:00:00`),end=new Date(`${e}T23:59:59.999`);if(end<start)return showAlert('End date must be on or after start date.','error');if(end-start>90*86400000)return showAlert('Custom activity searches are limited to 90 days. Please narrow the date range.','error');activityState.start=start;activityState.end=end;loadActivity();});
+document.getElementById('activity-jump').addEventListener('click',()=>document.getElementById('activity-section').scrollIntoView({behavior:'smooth'}));
+document.getElementById('refresh-btn').addEventListener('click',()=>{loadDashboard();loadUsers();loadActivity();});document.getElementById('logout-btn').addEventListener('click',()=>{clearSession();location.replace('index.html?mode=admin');});
+document.addEventListener('admin-auth-ready',e=>{const user=e.detail.user;document.getElementById('welcome-name').textContent=user.fullName;document.getElementById('welcome-staffid').textContent=user.staffId||'—';document.getElementById('welcome-staffid-inline').textContent=user.staffId||'—';loadDashboard();loadUsers();loadActivity();});
