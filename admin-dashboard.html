@@ -1,14 +1,61 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>Admin Dashboard — Digital Barangay App</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="admin.css"><script src="api.js"></script><script src="admin-guard.js"></script></head><body class="admin-body">
-<header class="app-shell-header"><div class="app-shell-header__inner"><div class="app-shell-header__brand"><div class="seal" aria-hidden="true">BSI</div><div><p class="eyebrow">Staff Portal</p><strong>Barangay San Isidro</strong></div></div><div class="app-shell-header__account"><span class="role-badge">Admin</span><span id="welcome-staffid" class="hint" style="margin:0"></span><strong id="welcome-name"></strong><button id="logout-btn" class="btn btn--ghost" type="button">Log out</button></div></div></header>
-<main class="portal-main"><div id="admin-alert" class="page-alert" hidden></div>
-<div class="portal-card"><p class="eyebrow">Operations</p><h2>What requires barangay staff attention</h2><p class="hint">Live data from Render and Neon PostgreSQL. Signed in as <strong id="welcome-staffid-inline"></strong> — meaningful administrative changes are recorded in the shared Activity ledger.</p><div class="quick-actions"><button id="refresh-btn" class="btn btn--green" type="button">Refresh</button><button id="activity-jump" class="btn btn--ghost" type="button">Activity</button></div></div>
-<div class="portal-grid-3" style="grid-template-columns:repeat(4,1fr)"><div class="portal-metric"><span>Residents</span><strong id="metric-users">—</strong></div><div class="portal-metric"><span>Total Requests</span><strong id="metric-requests">—</strong></div><div class="portal-metric"><span>Pending Requests</span><strong id="metric-pending">—</strong></div><div class="portal-metric"><span>Open Concerns</span><strong id="metric-concerns">—</strong></div></div>
-<section class="portal-card"><h2>Document Requests</h2><p class="hint">Only valid next steps are offered. Each status change is permanently attributed.</p><div id="requests-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Resident</th><th>Document</th><th>Purpose</th><th>Submitted</th><th>Status</th><th>Note</th><th>History</th><th></th></tr></thead><tbody id="requests-body"></tbody></table></section>
-<section class="portal-card"><h2>Community Concerns</h2><p class="hint">Review reports and move them through the response workflow.</p><div id="concerns-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Resident</th><th>Category</th><th>Location</th><th>Description</th><th>Submitted</th><th>Status</th><th>History</th><th></th></tr></thead><tbody id="concerns-body"></tbody></table></section>
-<section class="portal-card"><h2>Residents</h2><p class="hint">Registered accounts across the organization.</p><div id="users-loading" class="hint">Loading…</div><div id="users-error" class="hint" hidden>Resident list is unavailable right now.</div><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead><tbody id="users-body"></tbody></table></section>
-<section id="activity-section" class="portal-card"><p class="eyebrow">Shared Admin Ledger</p><h2>Activity</h2><p class="hint">Append-only history visible to all active Admins. Record history remains permanent; the global search window is limited to 90 days.</p>
-<div class="activity-periods" role="group" aria-label="Activity period"><button class="btn btn--green" type="button" data-period="today">Today</button><button class="btn btn--ghost" type="button" data-period="week">This Week</button><button class="btn btn--ghost" type="button" data-period="month">This Month</button><button class="btn btn--ghost" type="button" data-period="custom">Custom Range</button></div>
-<div id="custom-range" class="activity-filters" hidden><label>Start <input id="activity-start" type="date"></label><label>End <input id="activity-end" type="date"></label><button id="apply-range" class="btn btn--green" type="button">Apply</button></div>
-<div class="activity-filters"><label>Admin <select id="activity-admin"><option value="">All Admins</option></select></label><label>Module <select id="activity-module"><option value="">All Modules</option></select></label><label>Action <select id="activity-action"><option value="">All Actions</option></select></label></div>
-<div id="activity-loading" class="hint" hidden>Loading activity…</div><div id="activity-list" class="activity-list"></div></section>
-</main><footer class="hall-footer"><p>Digital Barangay App — staff portal</p></footer><script src="admin-portal.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Admin Dashboard — Digital Barangay App</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="admin.css">
+<script src="api.js"></script>
+<script src="admin-guard.js"></script>
+</head>
+<body class="admin-body">
+<header class="app-shell-header">
+  <div class="app-shell-header__inner">
+    <div class="app-shell-header__brand"><div class="seal" aria-hidden="true">BSI</div><div><p class="eyebrow">Staff Portal</p><strong>Barangay San Isidro</strong></div></div>
+    <div class="app-shell-header__account"><span class="role-badge">Admin</span><span id="welcome-staffid" class="hint" style="margin:0"></span><strong id="welcome-name"></strong><button id="logout-btn" class="btn btn--ghost" type="button">Log out</button></div>
+    <nav class="portal-nav" aria-label="Admin modules">
+      <button class="portal-nav__item portal-nav__item--active" data-nav="dashboard" type="button">Dashboard</button>
+      <button class="portal-nav__item" data-nav="residents" type="button">Residents</button>
+      <button class="portal-nav__item" data-nav="requests" type="button">Requests</button>
+      <button class="portal-nav__item" data-nav="concerns" type="button">Concerns</button>
+      <button class="portal-nav__item" data-nav="notices" type="button">Notices</button>
+      <button class="portal-nav__item" data-nav="officials" type="button">Officials</button>
+      <button class="portal-nav__item" data-nav="activity" type="button">Activity</button>
+    </nav>
+  </div>
+</header>
+<main class="portal-main">
+  <div id="admin-alert" class="page-alert" hidden></div>
+
+  <section class="portal-panel" data-panel="dashboard">
+    <div class="portal-card"><p class="eyebrow">Operations</p><h2>What requires barangay staff attention</h2><p class="hint">Live data from Render and Neon PostgreSQL. Signed in as <strong id="welcome-staffid-inline"></strong>. Meaningful administrative changes are recorded in the shared ledger.</p><div class="quick-actions"><button id="refresh-btn" class="btn btn--green" type="button">Refresh</button><button class="btn btn--ghost" type="button" data-nav="activity">Open Activity</button></div></div>
+    <div class="portal-grid-3" style="grid-template-columns:repeat(4,1fr)"><div class="portal-metric"><span>Residents</span><strong id="metric-users">—</strong></div><div class="portal-metric"><span>Total Requests</span><strong id="metric-requests">—</strong></div><div class="portal-metric"><span>Pending Requests</span><strong id="metric-pending">—</strong></div><div class="portal-metric"><span>Open Concerns</span><strong id="metric-concerns">—</strong></div></div>
+  </section>
+
+  <section class="portal-panel" data-panel="requests" hidden><div class="portal-card"><h2>Document Requests</h2><p class="hint">Only valid next steps are offered. View History uses the shared permanent record timeline.</p><div id="requests-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Resident</th><th>Document</th><th>Purpose</th><th>Submitted</th><th>Status</th><th>Note</th><th>History</th><th></th></tr></thead><tbody id="requests-body"></tbody></table></div></section>
+
+  <section class="portal-panel" data-panel="concerns" hidden><div class="portal-card"><h2>Community Concerns</h2><p class="hint">Review reports and move them through the response workflow.</p><div id="concerns-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Resident</th><th>Category</th><th>Location</th><th>Description</th><th>Submitted</th><th>Status</th><th>History</th><th></th></tr></thead><tbody id="concerns-body"></tbody></table></div></section>
+
+  <section class="portal-panel" data-panel="residents" hidden><div class="portal-card"><h2>Residents</h2><p class="hint">Registered accounts across the organization.</p><div id="users-loading" class="hint">Loading…</div><div id="users-error" class="hint" hidden>Resident list is unavailable right now.</div><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>History</th></tr></thead><tbody id="users-body"></tbody></table></div></section>
+
+  <section class="portal-panel" data-panel="notices" hidden><div class="portal-card"><h2>Notices</h2><p class="hint">Published barangay notices with shared administrative history.</p><div id="notices-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Title</th><th>Category</th><th>Published</th><th>Expires</th><th>History</th></tr></thead><tbody id="notices-body"></tbody></table></div></section>
+
+  <section class="portal-panel" data-panel="officials" hidden><div class="portal-card"><h2>Officials</h2><p class="hint">Barangay officials with shared administrative history.</p><div id="officials-loading" class="hint">Loading…</div><table class="data-table"><thead><tr><th>Name</th><th>Position</th><th>Committee</th><th>Term</th><th>History</th></tr></thead><tbody id="officials-body"></tbody></table></div></section>
+
+  <section class="portal-panel" data-panel="activity" hidden><div class="portal-card"><p class="eyebrow">Shared Admin Ledger</p><h2>Activity</h2><p class="hint">Append-only history visible to all active Admins. Record history remains permanent; the global search window is limited to 90 days.</p>
+    <div class="activity-periods" role="group" aria-label="Activity period"><button class="btn btn--green" type="button" data-period="today">Today</button><button class="btn btn--ghost" type="button" data-period="week">This Week</button><button class="btn btn--ghost" type="button" data-period="month">This Month</button><button class="btn btn--ghost" type="button" data-period="custom">Custom Range</button></div>
+    <div id="custom-range" class="activity-filters" hidden><label>Start <input id="activity-start" type="date"></label><label>End <input id="activity-end" type="date"></label><button id="apply-range" class="btn btn--green" type="button">Apply</button></div>
+    <div class="activity-filters"><label>Admin <select id="activity-admin"><option value="">All Admins</option></select></label><label>Module <select id="activity-module"><option value="">All Modules</option></select></label><label>Action <select id="activity-action"><option value="">All Actions</option></select></label></div>
+    <div id="activity-loading" class="hint" hidden>Loading activity…</div><div id="activity-warning" class="page-alert" hidden></div><div id="activity-list" class="activity-list"></div>
+  </div></section>
+</main>
+
+<div id="history-drawer" class="history-drawer" hidden role="dialog" aria-modal="true" aria-labelledby="history-title">
+  <div class="history-drawer__panel"><div class="history-drawer__head"><div><p class="eyebrow">Record History</p><h2 id="history-title">History</h2></div><button id="history-close" class="btn btn--ghost" type="button">Close</button></div><div id="history-content"></div></div>
+</div>
+<footer class="hall-footer"><p>Digital Barangay App — staff portal</p></footer>
+<script src="admin-portal.js"></script>
+</body>
+</html>
