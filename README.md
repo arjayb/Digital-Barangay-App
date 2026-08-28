@@ -6,7 +6,7 @@ A full-stack Digital Barangay resident, administrator, and credential-governance
 
 **v1.1.0 — live in production**
 
-**GitHub Pages:** https://arjayb.github.io/Digital-Barangay-App/
+**GitHub Pages:** https://kelbrictech.github.io/Digital-Barangay-App/
 
 **Backend API:** https://digital-barangay-backend.onrender.com/
 
@@ -103,12 +103,11 @@ The public frontend consumes the live Render API; application records persist in
 
 For backend setup, data model and deployment details, see the companion repository:
 
-https://github.com/arjayb/digital-barangay-backend
+https://github.com/kelbrictech/digital-barangay-backend
 
 ## Project status
 
 **v1.1.0 is deployed and human-accepted in production.** Additional independent assurance remains a future quality checkpoint and is not represented as part of this release.
-
 
 ---
 
